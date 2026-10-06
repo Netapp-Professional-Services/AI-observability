@@ -1,0 +1,66 @@
+# DocStream observability stack (separate from the DocStream repo).
+#
+# Profiles:
+#   cloud — otel-collector → OpenObserve Cloud free tier
+#   local — self-hosted OpenObserve + collector
+#
+# Join DocStream on the same Compose project (COMPOSE_PROJECT_NAME=docstream):
+#   ./scripts/start-with-docstream.sh cloud
+# Or manually (from this directory):
+#   podman compose -f ../docstream/compose.yaml \
+#     -f ../docstream/compose.observability.yaml \
+#     -f compose.yaml \
+#     --profile pipeline --profile langflow --profile cloud up -d
+#
+# DocStream .env must set:
+#   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+#   OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+
+name: ${COMPOSE_PROJECT_NAME:-docstream}
+
+services:
+  otel-collector:
+    profiles:
+      - cloud
+      - local
+    image: docker.io/otel/opentelemetry-collector-contrib:0.114.0
+    container_name: otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      - OPENOBSERVE_OTLP_ENDPOINT=${OPENOBSERVE_OTLP_ENDPOINT}
+      - OPENOBSERVE_AUTH_HEADER=${OPENOBSERVE_AUTH_HEADER}
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (DocStream contract)
+      - "13133:13133" # health
+    volumes:
+      - ./collector/config.yaml:/etc/otelcol/config.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:13133/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  openobserve:
+    profiles:
+      - local
+    image: public.ecr.aws/zinclabs/openobserve:v0.14.5
+    container_name: openobserve
+    restart: unless-stopped
+    ports:
+      - "5080:5080"
+    environment:
+      - ZO_ROOT_USER_EMAIL=${ZO_ROOT_USER_EMAIL:-root@example.com}
+      - ZO_ROOT_USER_PASSWORD=${ZO_ROOT_USER_PASSWORD}
+      - ZO_DATA_DIR=/data
+    volumes:
+      - ${OPENOBSERVE_DATA_DIR:-openobserve-data}:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  openobserve-data:
