@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <logger>
+        <!-- Set console log level to warning (only critical messages) -->
+        <level>warning</level>
+        <console>true</console>
+    </logger>
+
+    <!-- Server metrics, text logs, and trace logs stay off so they are
+         not stored or shown in OpenLIT. -->
+    <prometheus remove="1"/>
+    <trace_log remove="1"/>
+    <text_log remove="1"/>
+    <metric_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    
+    <!-- Reduce other system table logging -->
+    <query_log>
+        <!-- Only log slow queries (over 1 second) -->
+        <log_queries_min_query_duration_ms>1000</log_queries_min_query_duration_ms>
+        <!-- Reduce flush frequency -->
+        <flush_interval_milliseconds>60000</flush_interval_milliseconds>
+        <!-- Set TTL to 7 days -->
+        <table_ttl>604800</table_ttl>
+    </query_log>
+    
+    <!-- Configure system log levels -->
+    <system_log>
+        <level>warning</level>
+    </system_log>
+    
+    <!-- Configure part log (reduce verbosity) -->
+    <part_log>
+        <level>warning</level>
+        <flush_interval_milliseconds>120000</flush_interval_milliseconds>
+        <!-- Set TTL to 7 days -->
+        <table_ttl>604800</table_ttl>
+    </part_log>
+    
+    <!-- Configure latency log (reduce storage) -->
+    <latency_log>
+        <flush_interval_milliseconds>120000</flush_interval_milliseconds>
+        <!-- Set TTL to 7 days -->
+        <table_ttl>604800</table_ttl>
+    </latency_log>
+</clickhouse> 

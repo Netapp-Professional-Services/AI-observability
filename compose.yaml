@@ -18,10 +18,10 @@ services:
       - openobserve-cloud
       - openlit
       - custom
-    image: docker.io/otel/opentelemetry-collector-contrib:0.114.0
+    image: otel/opentelemetry-collector-contrib:0.163.2
     container_name: otel-collector
     restart: unless-stopped
-    command: ["--config=/etc/otelcol/config.yaml"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
     environment:
       - OPENOBSERVE_OTLP_ENDPOINT=${OPENOBSERVE_OTLP_ENDPOINT:-}
       - OPENOBSERVE_AUTH_HEADER=${OPENOBSERVE_AUTH_HEADER:-}
@@ -35,7 +35,7 @@ services:
       - "4318:4318"   # OTLP HTTP
       - "13133:13133" # health
     volumes:
-      - ${OBSERVABILITY_DIR:-.}/collector/${COLLECTOR_CONFIG:-config.openobserve.yaml}:/etc/otelcol/config.yaml:ro
+      - ${OBSERVABILITY_DIR:-.}/collector/${COLLECTOR_CONFIG:-config.openobserve.yaml}:/etc/otelcol-contrib/config.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     healthcheck:
@@ -65,71 +65,72 @@ services:
       timeout: 5s
       retries: 20
 
-  # Simplified OpenLIT stack (realtime/NATS disabled). Gateway owns host :4317/:4318.
-  clickhouse:
+  openlit-clickhouse:
     profiles:
       - openlit
     image: clickhouse/clickhouse-server:24.4.1
-    container_name: clickhouse
+    container_name: openlit-clickhouse
     restart: unless-stopped
     environment:
       - CLICKHOUSE_USER=${OPENLIT_DB_USER:-default}
       - CLICKHOUSE_PASSWORD=${OPENLIT_DB_PASSWORD:-OPENLIT}
-      - CLICKHOUSE_DB=${OPENLIT_DB_NAME:-openlit}
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_DATABASE=${OPENLIT_DB_NAME:-openlit}
+      - CLICKHOUSE_ALWAYS_RUN_INITDB_SCRIPTS=true
     volumes:
-      - clickhouse-data:/var/lib/clickhouse
+      - ${OPENLIT_CLICKHOUSE_DATA_DIR:-openlit-clickhouse-data}:/var/lib/clickhouse
+      - ./openlit/assets/clickhouse-config.xml:/etc/clickhouse-server/config.d/custom-config.xml:ro
+      - ./openlit/assets/clickhouse-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    ports:
+      - "9000:9000"
+      - "8123:8123"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "clickhouse-client --user=$${CLICKHOUSE_USER} --password=$${CLICKHOUSE_PASSWORD} --query='SELECT 1' || exit 1",
-        ]
+      test: ["CMD-SHELL", "clickhouse-client --user=$${CLICKHOUSE_USER} --password=$${CLICKHOUSE_PASSWORD} --query='SELECT 1' || exit 1"]
       interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 60s
+      timeout: 3s
+      retries: 10
+      start_period: 100s
 
   openlit:
     profiles:
       - openlit
-    image: ghcr.io/openlit/openlit:latest
+    image: ghcr.io/openlit/openlit:2.1.0
     container_name: openlit
     restart: unless-stopped
     environment:
       - TELEMETRY_ENABLED=true
-      - INIT_DB_HOST=clickhouse
+      - INIT_DB_HOST=openlit-clickhouse
       - INIT_DB_PORT=8123
       - INIT_DB_DATABASE=${OPENLIT_DB_NAME:-openlit}
       - INIT_DB_USERNAME=${OPENLIT_DB_USER:-default}
       - INIT_DB_PASSWORD=${OPENLIT_DB_PASSWORD:-OPENLIT}
       - SQLITE_DATABASE_URL=file:/app/client/data/data.db
-      # Disable realtime findings so we do not need a NATS sidecar.
-      - NATS_URL=
-      - PORT=3000
-      - DOCKER_PORT=3000
+      - PORT=${OPENLIT_UI_PORT:-3000}
+      - DOCKER_PORT=${OPENLIT_UI_PORT:-3000}
     ports:
-      - "${OPENLIT_UI_PORT:-3000}:3000"
+      - "${OPENLIT_UI_PORT:-3000}:${OPENLIT_UI_PORT:-3000}"
       # OTLP stays internal — clients send to otel-collector, which fans in here.
     depends_on:
-      clickhouse:
+      openlit-clickhouse:
         condition: service_healthy
     volumes:
-      - openlit-data:/app/client/data
+      - ${OPENLIT_DATA_DIR:-openlit-data}:/app/client/data
+      - ./openlit/assets/otel-collector-config.yaml:/etc/otel/otel-collector-config.yaml:ro
+      # OpenLIT 2.1.0 drops the ClickHouse log id and looks the row up with a
+      # different hash, so the detail pane renders empty. These overlays keep
+      # the real id. They match image ghcr.io/openlit/openlit:2.1.0 only.
+      - ./openlit/assets/openlit-patches/server/chunks/7838.js:/app/client/.next/server/chunks/7838.js:ro
+      - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/route.js:/app/client/.next/server/app/api/telemetry/logs/route.js:ro
+      - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/[id]/route.js:/app/client/.next/server/app/api/telemetry/logs/[id]/route.js:ro
+      - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/attribute-keys/route.js:/app/client/.next/server/app/api/telemetry/logs/attribute-keys/route.js:ro
+      - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/config/route.js:/app/client/.next/server/app/api/telemetry/logs/config/route.js:ro
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "Promise.all([fetch('http://127.0.0.1:3000'),fetch('http://127.0.0.1:4318/health')]).then(rs=>process.exit(rs.every(r=>r.ok)?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 45s
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)).then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
 
 volumes:
   openobserve-data:
-  clickhouse-data:
+  openlit-clickhouse-data:
   openlit-data:

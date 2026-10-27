@@ -4,6 +4,8 @@ receivers:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        # Default is 4 MiB, which rejects trace batches that include prompt content.
+        max_recv_msg_size_mib: 16
       http:
         endpoint: 0.0.0.0:4318
 
@@ -14,17 +16,22 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 400
-    spike_limit_mib: 100
+    spike_limit_mib: 128
+
 exporters:
-  # OpenLIT's first-party OTLP receiver (gRPC). Host ports stay on this gateway.
-  otlp/openlit:
+  otlp_grpc/openlit:
     endpoint: ${env:OPENLIT_OTLP_ENDPOINT}
     tls:
       insecure: true
     compression: gzip
     timeout: 30s
-  debug:
-    verbosity: basic
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      block_on_overflow: true
 
 extensions:
   health_check:
@@ -36,15 +43,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/openlit, debug]
+      exporters: [otlp_grpc/openlit]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/openlit]
+      exporters: [otlp_grpc/openlit]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/openlit, debug]
-  telemetry:
-    logs:
-      level: info
+      exporters: [otlp_grpc/openlit]
