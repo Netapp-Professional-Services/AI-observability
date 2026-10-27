@@ -1,5 +1,4 @@
 # Gateway collector → OpenObserve (Cloud or self-hosted).
-# DocStream's otel-collector-agent forwards here over gRPC :4317.
 receivers:
   otlp:
     protocols:
@@ -40,12 +39,6 @@ processors:
     check_interval: 1s
     limit_mib: 400
     spike_limit_mib: 100
-  resource:
-    attributes:
-      - key: service.namespace
-        value: docstream
-        action: upsert
-
 exporters:
   otlphttp/openobserve:
     endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
@@ -65,15 +58,15 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlphttp/openobserve, debug]
     metrics:
       receivers: [otlp, docker_stats]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlphttp/openobserve]
     logs:
       receivers: [otlp, filelog]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlphttp/openobserve, debug]
   telemetry:
     logs:

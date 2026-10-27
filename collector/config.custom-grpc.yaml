@@ -16,12 +16,6 @@ processors:
     check_interval: 1s
     limit_mib: 400
     spike_limit_mib: 100
-  resource:
-    attributes:
-      - key: service.namespace
-        value: docstream
-        action: upsert
-
 exporters:
   otlp/custom:
     endpoint: ${env:CUSTOM_OTLP_GRPC_ENDPOINT}
@@ -41,15 +35,15 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/custom, debug]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/custom]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/custom, debug]
   telemetry:
     logs:

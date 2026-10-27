@@ -1,5 +1,4 @@
 # Gateway collector → OpenLIT (OTLP gRPC on openlit:4317).
-# DocStream's otel-collector-agent forwards here over gRPC :4317.
 receivers:
   otlp:
     protocols:
@@ -16,12 +15,6 @@ processors:
     check_interval: 1s
     limit_mib: 400
     spike_limit_mib: 100
-  resource:
-    attributes:
-      - key: service.namespace
-        value: docstream
-        action: upsert
-
 exporters:
   # OpenLIT's first-party OTLP receiver (gRPC). Host ports stay on this gateway.
   otlp/openlit:
@@ -42,15 +35,15 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/openlit, debug]
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/openlit]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
+      processors: [memory_limiter, batch]
       exporters: [otlp/openlit, debug]
   telemetry:
     logs:

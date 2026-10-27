@@ -1,32 +1,30 @@
 # OpenLIT backend
 
-[OpenLIT](https://docs.openlit.io/) is an open-source GenAI observability UI with
-a built-in OTLP receiver. This repo runs a **simplified** OpenLIT stack behind
-the DocStream gateway so host ports `:4317` / `:4318` stay on `otel-collector`.
+[OpenLIT](https://docs.openlit.io/) is an open-source GenAI observability UI
+with a built-in OTLP receiver. This repository runs a simplified OpenLIT stack;
+the gateway keeps host ports `4317` and `4318`, while OpenLIT's receiver stays
+internal.
 
 ## Start
 
 ```bash
-# DocStream .env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-
-# This repo
-./scripts/start-with-docstream.sh openlit
+./scripts/start.sh openlit
 ```
 
-UI: http://localhost:3000
+Open http://localhost:3000. Send client telemetry to the gateway at
+`localhost:4317` (gRPC) or `localhost:4318` (HTTP).
 
-## Layout
+## Services
 
 | Service | Role |
-|---------|------|
-| `otel-collector` | Gateway DocStream’s agent talks to |
-| `openlit` | UI + OTLP receiver (internal `:4317`/`:4318` only) |
+|---|---|
+| `otel-collector` | Receives OTLP and forwards it to OpenLIT |
+| `openlit` | UI and internal OTLP receiver |
 | `clickhouse` | Storage for `otel_*` tables |
 
-Realtime / NATS is disabled (`NATS_URL=`) to keep the demo stack small. For a
-full OpenLIT install (NATS + alerts), run upstream OpenLIT yourself and use
-**custom** mode:
+Realtime/NATS is disabled (`NATS_URL=`) to keep this local stack small. For a
+full upstream OpenLIT installation, run it separately and point `custom` mode
+at its OTLP endpoint:
 
 ```dotenv
 CUSTOM_OTLP_ENDPOINT=http://openlit:4317
@@ -34,5 +32,5 @@ CUSTOM_OTLP_PROTOCOL=grpc
 ```
 
 ```bash
-./scripts/start-with-docstream.sh custom
+./scripts/start.sh custom
 ```

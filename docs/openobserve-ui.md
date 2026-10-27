@@ -1,84 +1,43 @@
-# OpenObserve UI: finding DocStream stats
+# OpenObserve UI
 
-Data **is ingested**; the default Logs view will not show metrics, and a short time
-range can hide older seed logs.
+Start the local backend with:
 
-UI: http://127.0.0.1:5080/web/  
-Login: `root@example.com` / password from observability `.env`
-
-## AI effective metrics dashboard
-
-Pre-built dashboard for the DocStream AI path (Langflow → MCP → OpenSearch → ingest/Tika):
-
-- Design + PromQL: [ai-metrics-dashboard.md](ai-metrics-dashboard.md)
-- Import JSON: `dashboards/docstream-ai-effective-metrics.dashboard.json`
-- UI: **Dashboards → DocStream AI Effective Metrics**
-
-That board uses live `docker_stats` as proxies for AI load. Token/latency/cost still belong in Langfuse (or Langflow 1.12+ OTLP).
-
-## Metrics (container CPU / memory)
-
-Do **not** look under **Logs** for `container_cpu_utilization`.
-
-1. Left nav → **Metrics** (or open http://127.0.0.1:5080/web/metrics)
-2. Set time range to **Past 6 hours** or **Past 1 day** (not only 15 minutes if scrape paused)
-3. PromQL examples:
-
-```promql
-container_cpu_utilization
+```bash
+./scripts/start.sh openobserve
 ```
 
-```promql
-container_cpu_utilization{container_name="langflow"}
-```
+Open http://127.0.0.1:5080/web/ and sign in with `ZO_ROOT_USER_EMAIL` and
+`ZO_ROOT_USER_PASSWORD` from `.env`.
 
-```promql
-container_memory_percent{container_name="opensearch"}
-```
+The DocStream dashboard JSON is
+[`dashboards/docstream-ai-effective-metrics.dashboard.json`](../dashboards/docstream-ai-effective-metrics.dashboard.json).
+Import steps are in [ai-metrics-dashboard.md](ai-metrics-dashboard.md).
 
-```promql
-container_memory_usage_total{container_name="ingest-service"}
-```
+## Traces and logs
 
-Series are labeled with `container_name` (`langflow`, `opensearch`, `ingest-service`, …).
-
-Stream list under **Streams → Metrics** should include:
-
-- `container_cpu_utilization`
-- `container_memory_percent`
-- `container_memory_usage_total`
-- `container_network_io_usage_rx_bytes` / `_tx_bytes`
-
-## Logs
-
-1. Left nav → **Logs**
-2. Stream: **`docstream`** (and/or **`default`**)
-3. Stream type: **logs**
-4. Time range: **Past 1 day** (seed logs may be older than 15 minutes)
-5. Optional SQL:
-
-```sql
-SELECT service, message, _timestamp FROM "docstream" ORDER BY _timestamp DESC
-```
-
-To add a fresh log line for the “last 15 minutes” window:
+The collector forwards OTLP traces and logs to OpenObserve's default
+organization. Open **Traces** to explore spans, or open **Logs** and select the
+stream created by your client. The generic demo sends a `gateway-demo` service:
 
 ```bash
 ./scripts/seed-demo-data.sh
 ```
 
-### Why app logs look empty
+Use a sufficiently broad time range when checking data that was sent before the
+last 15 minutes.
 
-Container stdout scrape (`filelog` on `/var/lib/docker/containers`) is currently
-**permission denied** on Docker Desktop. OpenObserve will not show live
-`docker logs` until that is fixed. Metrics via `docker_stats` still work.
+## Host metrics
 
-## Traces
+The OpenObserve profile also collects Docker container metrics. In **Metrics**,
+search for `container_cpu_utilization`, `container_memory_percent`, or
+`container_memory_usage_total`. Filter by the `container_name` label for your
+own container names.
 
-**Traces → stream `default`**. Full Langflow playground/LLM traces need Langflow
-1.12+ OTLP or Langfuse; this stack’s Langflow 1.11.5 does not emit rich chat spans.
+Container stdout collection (`filelog`) can be unavailable on Docker Desktop
+because its container-log path is not mounted into the collector. OTLP logs
+sent by applications continue to work independently.
 
-## Quick API checks
+## API checks
 
 ```bash
 # Metric names present?

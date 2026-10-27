@@ -1,7 +1,4 @@
-# AI Observability gateway (separate from the DocStream repo).
-#
-# DocStream's in-stack otel-collector-agent forwards OTLP/gRPC here:
-#   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+# OTLP gateway with pluggable backend profiles.
 #
 # Profiles (pick one backend UI/store):
 #   openobserve       — self-hosted OpenObserve + gateway
@@ -9,10 +6,10 @@
 #   openlit           — OpenLIT + ClickHouse + gateway
 #   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# Start: ./scripts/start-with-docstream.sh openobserve|openobserve-cloud|openlit|custom
+# Start: ./scripts/start.sh openobserve|openobserve-cloud|openlit|custom
 # Aliases: local → openobserve, cloud → openobserve-cloud
 
-name: ${COMPOSE_PROJECT_NAME:-docstream}
+name: ${COMPOSE_PROJECT_NAME:-ai-observability}
 
 services:
   otel-collector:
@@ -34,12 +31,11 @@ services:
       - CUSTOM_OTLP_AUTH_HEADER=${CUSTOM_OTLP_AUTH_HEADER:-}
       - CUSTOM_OTLP_INSECURE=${CUSTOM_OTLP_INSECURE:-true}
     ports:
-      - "4317:4317"   # OTLP gRPC — DocStream agent join point
-      - "4318:4318"   # OTLP HTTP (seed scripts / direct clients)
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
       - "13133:13133" # health
     volumes:
-      # Multi-file compose resolves relative mounts from DocStream's compose file.
-      - ${OBSERVABILITY_DIR:?Set OBSERVABILITY_DIR to this repo}/collector/${COLLECTOR_CONFIG:?Set COLLECTOR_CONFIG}:/etc/otelcol/config.yaml:ro
+      - ${OBSERVABILITY_DIR:-.}/collector/${COLLECTOR_CONFIG:-config.openobserve.yaml}:/etc/otelcol/config.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     healthcheck:
@@ -114,7 +110,7 @@ services:
       - DOCKER_PORT=3000
     ports:
       - "${OPENLIT_UI_PORT:-3000}:3000"
-      # OTLP stays internal — DocStream talks to otel-collector, which fans in here.
+      # OTLP stays internal — clients send to otel-collector, which fans in here.
     depends_on:
       clickhouse:
         condition: service_healthy
