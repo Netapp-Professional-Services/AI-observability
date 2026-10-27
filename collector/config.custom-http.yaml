@@ -1,9 +1,5 @@
-# OpenTelemetry Collector → OpenObserve (Cloud or self-hosted).
-# Env substitution is performed by the collector image (${env:VAR}).
-#
-# DocStream contract hostname: otel-collector:4318 (HTTP) / :4317 (gRPC)
-# See ../docs/join-docstream.md
-
+# Gateway collector → custom OTLP/HTTP backend.
+# CUSTOM_OTLP_HTTP_ENDPOINT=http(s)://host:port[/path] (OpenObserve-style base URL).
 receivers:
   otlp:
     protocols:
@@ -27,10 +23,10 @@ processors:
         action: upsert
 
 exporters:
-  otlphttp/openobserve:
-    endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
+  otlphttp/custom:
+    endpoint: ${env:CUSTOM_OTLP_HTTP_ENDPOINT}
     headers:
-      Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+      Authorization: ${env:CUSTOM_OTLP_AUTH_HEADER}
     compression: gzip
     timeout: 30s
   debug:
@@ -46,15 +42,15 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve]
+      exporters: [otlphttp/custom, debug]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve]
+      exporters: [otlphttp/custom]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve]
+      exporters: [otlphttp/custom, debug]
   telemetry:
     logs:
       level: info

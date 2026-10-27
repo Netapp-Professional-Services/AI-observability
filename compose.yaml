@@ -1,50 +1,57 @@
-# DocStream observability stack (separate from the DocStream repo).
+# AI Observability gateway (separate from the DocStream repo).
 #
-# Profiles:
-#   cloud — otel-collector → OpenObserve Cloud free tier
-#   local — self-hosted OpenObserve + collector
+# DocStream's in-stack otel-collector-agent forwards OTLP/gRPC here:
+#   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 #
-# Join DocStream on the same Compose project (COMPOSE_PROJECT_NAME=docstream):
-#   ./scripts/start-with-docstream.sh cloud
-# Or manually (from this directory):
-#   podman compose -f ../docstream/compose.yaml \
-#     -f ../docstream/compose.observability.yaml \
-#     -f compose.yaml \
-#     --profile pipeline --profile langflow --profile cloud up -d
+# Profiles (pick one backend UI/store):
+#   openobserve       — self-hosted OpenObserve + gateway
+#   openobserve-cloud — gateway only → OpenObserve Cloud
+#   openlit           — OpenLIT + ClickHouse + gateway
+#   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# DocStream .env must set:
-#   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-#   OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+# Start: ./scripts/start-with-docstream.sh openobserve|openobserve-cloud|openlit|custom
+# Aliases: local → openobserve, cloud → openobserve-cloud
 
 name: ${COMPOSE_PROJECT_NAME:-docstream}
 
 services:
   otel-collector:
     profiles:
-      - cloud
-      - local
+      - openobserve
+      - openobserve-cloud
+      - openlit
+      - custom
     image: docker.io/otel/opentelemetry-collector-contrib:0.114.0
     container_name: otel-collector
     restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]
     environment:
-      - OPENOBSERVE_OTLP_ENDPOINT=${OPENOBSERVE_OTLP_ENDPOINT}
-      - OPENOBSERVE_AUTH_HEADER=${OPENOBSERVE_AUTH_HEADER}
+      - OPENOBSERVE_OTLP_ENDPOINT=${OPENOBSERVE_OTLP_ENDPOINT:-}
+      - OPENOBSERVE_AUTH_HEADER=${OPENOBSERVE_AUTH_HEADER:-}
+      - OPENLIT_OTLP_ENDPOINT=${OPENLIT_OTLP_ENDPOINT:-openlit:4317}
+      - CUSTOM_OTLP_GRPC_ENDPOINT=${CUSTOM_OTLP_GRPC_ENDPOINT:-}
+      - CUSTOM_OTLP_HTTP_ENDPOINT=${CUSTOM_OTLP_HTTP_ENDPOINT:-}
+      - CUSTOM_OTLP_AUTH_HEADER=${CUSTOM_OTLP_AUTH_HEADER:-}
+      - CUSTOM_OTLP_INSECURE=${CUSTOM_OTLP_INSECURE:-true}
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP (DocStream contract)
+      - "4317:4317"   # OTLP gRPC — DocStream agent join point
+      - "4318:4318"   # OTLP HTTP (seed scripts / direct clients)
       - "13133:13133" # health
     volumes:
-      - ./collector/config.yaml:/etc/otelcol/config.yaml:ro
+      # Multi-file compose resolves relative mounts from DocStream's compose file.
+      - ${OBSERVABILITY_DIR:?Set OBSERVABILITY_DIR to this repo}/collector/${COLLECTOR_CONFIG:?Set COLLECTOR_CONFIG}:/etc/otelcol/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:13133/ || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+      test: ["CMD", "/otelcol-contrib", "components"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   openobserve:
     profiles:
-      - local
+      - openobserve
     image: public.ecr.aws/zinclabs/openobserve:v0.14.5
     container_name: openobserve
     restart: unless-stopped
@@ -62,5 +69,71 @@ services:
       timeout: 5s
       retries: 20
 
+  # Simplified OpenLIT stack (realtime/NATS disabled). Gateway owns host :4317/:4318.
+  clickhouse:
+    profiles:
+      - openlit
+    image: clickhouse/clickhouse-server:24.4.1
+    container_name: clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_USER=${OPENLIT_DB_USER:-default}
+      - CLICKHOUSE_PASSWORD=${OPENLIT_DB_PASSWORD:-OPENLIT}
+      - CLICKHOUSE_DB=${OPENLIT_DB_NAME:-openlit}
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "clickhouse-client --user=$${CLICKHOUSE_USER} --password=$${CLICKHOUSE_PASSWORD} --query='SELECT 1' || exit 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  openlit:
+    profiles:
+      - openlit
+    image: ghcr.io/openlit/openlit:latest
+    container_name: openlit
+    restart: unless-stopped
+    environment:
+      - TELEMETRY_ENABLED=true
+      - INIT_DB_HOST=clickhouse
+      - INIT_DB_PORT=8123
+      - INIT_DB_DATABASE=${OPENLIT_DB_NAME:-openlit}
+      - INIT_DB_USERNAME=${OPENLIT_DB_USER:-default}
+      - INIT_DB_PASSWORD=${OPENLIT_DB_PASSWORD:-OPENLIT}
+      - SQLITE_DATABASE_URL=file:/app/client/data/data.db
+      # Disable realtime findings so we do not need a NATS sidecar.
+      - NATS_URL=
+      - PORT=3000
+      - DOCKER_PORT=3000
+    ports:
+      - "${OPENLIT_UI_PORT:-3000}:3000"
+      # OTLP stays internal — DocStream talks to otel-collector, which fans in here.
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - openlit-data:/app/client/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "Promise.all([fetch('http://127.0.0.1:3000'),fetch('http://127.0.0.1:4318/health')]).then(rs=>process.exit(rs.every(r=>r.ok)?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
 volumes:
   openobserve-data:
+  clickhouse-data:
+  openlit-data:

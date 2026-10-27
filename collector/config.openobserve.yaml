@@ -1,0 +1,80 @@
+# Gateway collector → OpenObserve (Cloud or self-hosted).
+# DocStream's otel-collector-agent forwards here over gRPC :4317.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 15s
+    timeout: 10s
+    api_version: "1.44"
+
+  filelog:
+    include:
+      - /var/lib/docker/containers/*/*-json.log
+    start_at: end
+    include_file_path: true
+    operators:
+      - type: json_parser
+        id: parser-docker
+        timestamp:
+          parse_from: attributes.time
+          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
+      - type: move
+        from: attributes.log
+        to: body
+      - type: regex_parser
+        regex: '^/var/lib/docker/containers/(?P<container_id>[0-9a-f]+)/'
+        parse_from: attributes["log.file.path"]
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 400
+    spike_limit_mib: 100
+  resource:
+    attributes:
+      - key: service.namespace
+        value: docstream
+        action: upsert
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
+    headers:
+      Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+    compression: gzip
+    timeout: 30s
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/openobserve, debug]
+    metrics:
+      receivers: [otlp, docker_stats]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/openobserve]
+    logs:
+      receivers: [otlp, filelog]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/openobserve, debug]
+  telemetry:
+    logs:
+      level: info

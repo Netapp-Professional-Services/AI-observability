@@ -1,0 +1,56 @@
+# Gateway collector → custom OTLP/gRPC backend.
+# CUSTOM_OTLP_GRPC_ENDPOINT=host:port (scheme stripped by start script).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 400
+    spike_limit_mib: 100
+  resource:
+    attributes:
+      - key: service.namespace
+        value: docstream
+        action: upsert
+
+exporters:
+  otlp/custom:
+    endpoint: ${env:CUSTOM_OTLP_GRPC_ENDPOINT}
+    tls:
+      insecure: ${env:CUSTOM_OTLP_INSECURE}
+    compression: gzip
+    timeout: 30s
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/custom, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/custom]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/custom, debug]
+  telemetry:
+    logs:
+      level: info
