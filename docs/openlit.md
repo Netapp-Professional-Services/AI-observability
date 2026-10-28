@@ -1,32 +1,70 @@
 # OpenLIT backend
 
-[OpenLIT](https://docs.openlit.io/) is an open-source GenAI observability UI with
-a built-in OTLP receiver. This repo runs a **simplified** OpenLIT stack behind
-the DocStream gateway so host ports `:4317` / `:4318` stay on `otel-collector`.
+[OpenLIT](https://docs.openlit.io/) 2.1.0 is the GenAI observability UI for this
+profile. The gateway keeps host ports `4317` and `4318`. OpenLIT's embedded
+collector stays on the compose network and writes ClickHouse itself.
 
 ## Start
 
 ```bash
-# DocStream .env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-
-# This repo
-./scripts/start-with-docstream.sh openlit
+./scripts/start.sh openlit
 ```
 
-UI: http://localhost:3000
+To send the same gateway stream to OpenObserve as well:
 
-## Layout
+```bash
+./scripts/start.sh openobserve openlit
+```
+
+Open http://localhost:3000 (override with `OPENLIT_UI_PORT`). Send client telemetry to the
+gateway at `localhost:4317` (gRPC) or `localhost:4318` (HTTP). The gateway forwards a
+copy to OpenLIT at `openlit:4317`. With both modes, it also forwards to OpenObserve.
+
+## Database config (seeded automatically)
+
+On first start the OpenLIT entrypoint runs `prisma db seed` and creates an
+active ClickHouse Database Config named **Default DB** (environment
+`production`) from the compose `INIT_DB_*` values:
+
+| Field | Source |
+|---|---|
+| Host | `INIT_DB_HOST` → `openlit-clickhouse` |
+| Port | `INIT_DB_PORT` → `8123` |
+| Database | `INIT_DB_DATABASE` ← `OPENLIT_DB_NAME` (default `openlit`) |
+| Username | `INIT_DB_USERNAME` ← `OPENLIT_DB_USER` (default `default`) |
+| Password | `INIT_DB_PASSWORD` ← `OPENLIT_DB_PASSWORD` (default `OPENLIT`) |
+
+Sign in with the seeded user `user@openlit.io` / `openlituser`. Traces and
+dashboards should load without a manual Connectors step.
+
+`INIT_DB_*` is bootstrap-only. Changing host or credentials later must be done
+in the UI (**Organisation → Projects → Manage DB Config** or **Connectors →
+ClickHouse**), then mark the config active. Do not expect a compose env change
+to rewrite an existing SQLite row on the `openlit-data` volume.
+
+## Services
 
 | Service | Role |
-|---------|------|
-| `otel-collector` | Gateway DocStream’s agent talks to |
-| `openlit` | UI + OTLP receiver (internal `:4317`/`:4318` only) |
-| `clickhouse` | Storage for `otel_*` tables |
+|---|---|
+| `otel-collector` | Receives OTLP and forwards it to `openlit:4317` |
+| `openlit` | UI (`ghcr.io/openlit/openlit:2.1.0`) and embedded collector |
+| `openlit-clickhouse` | Storage for `otel_*` tables |
 
-Realtime / NATS is disabled (`NATS_URL=`) to keep the demo stack small. For a
-full OpenLIT install (NATS + alerts), run upstream OpenLIT yourself and use
-**custom** mode:
+ClickHouse is initialized from
+[`openlit/assets/clickhouse-init.sh`](../openlit/assets/clickhouse-init.sh) and
+[`openlit/assets/clickhouse-config.xml`](../openlit/assets/clickhouse-config.xml).
+The embedded collector config is
+[`openlit/assets/otel-collector-config.yaml`](../openlit/assets/otel-collector-config.yaml),
+mounted at `/etc/otel/otel-collector-config.yaml`. Log-detail patches under
+`openlit/assets/openlit-patches/` match image `2.1.0` only.
+
+ClickHouse and the OpenLIT UI database use named volumes
+(`openlit-clickhouse-data` and `openlit-data`). Set
+`OPENLIT_CLICKHOUSE_DATA_DIR` and `OPENLIT_DATA_DIR` in `.env` to mount host
+directories instead.
+
+There is no NATS sidecar. For a full upstream OpenLIT installation, run it
+separately and point `custom` mode at its OTLP endpoint:
 
 ```dotenv
 CUSTOM_OTLP_ENDPOINT=http://openlit:4317
@@ -34,5 +72,5 @@ CUSTOM_OTLP_PROTOCOL=grpc
 ```
 
 ```bash
-./scripts/start-with-docstream.sh custom
+./scripts/start.sh custom
 ```

@@ -1,36 +1,13 @@
-# Gateway collector → OpenObserve (Cloud or self-hosted).
-# DocStream's otel-collector-agent forwards here over gRPC :4317.
+# Gateway collector → self-hosted OpenObserve over OTLP/gRPC.
 receivers:
   otlp:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        # Default is 4 MiB, which rejects trace batches that include prompt content.
+        max_recv_msg_size_mib: 16
       http:
         endpoint: 0.0.0.0:4318
-
-  docker_stats:
-    endpoint: unix:///var/run/docker.sock
-    collection_interval: 15s
-    timeout: 10s
-    api_version: "1.44"
-
-  filelog:
-    include:
-      - /var/lib/docker/containers/*/*-json.log
-    start_at: end
-    include_file_path: true
-    operators:
-      - type: json_parser
-        id: parser-docker
-        timestamp:
-          parse_from: attributes.time
-          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
-      - type: move
-        from: attributes.log
-        to: body
-      - type: regex_parser
-        regex: '^/var/lib/docker/containers/(?P<container_id>[0-9a-f]+)/'
-        parse_from: attributes["log.file.path"]
 
 processors:
   batch:
@@ -39,22 +16,18 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 400
-    spike_limit_mib: 100
-  resource:
-    attributes:
-      - key: service.namespace
-        value: docstream
-        action: upsert
+    spike_limit_mib: 128
 
 exporters:
-  otlphttp/openobserve:
+  otlp/openobserve:
     endpoint: ${env:OPENOBSERVE_OTLP_ENDPOINT}
     headers:
       Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+      organization: ${env:OPENOBSERVE_ORGANIZATION}
+    tls:
+      insecure: ${env:OPENOBSERVE_TLS_INSECURE}
     compression: gzip
     timeout: 30s
-  debug:
-    verbosity: basic
 
 extensions:
   health_check:
@@ -65,16 +38,16 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve, debug]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/openobserve]
     metrics:
-      receivers: [otlp, docker_stats]
-      processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/openobserve]
     logs:
-      receivers: [otlp, filelog]
-      processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/openobserve, debug]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/openobserve]
   telemetry:
     logs:
       level: info
