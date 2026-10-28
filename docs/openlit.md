@@ -20,31 +20,27 @@ Open http://localhost:3000 (override with `OPENLIT_UI_PORT`). Send client teleme
 gateway at `localhost:4317` (gRPC) or `localhost:4318` (HTTP). The gateway forwards a
 copy to OpenLIT at `openlit:4317`. With both modes, it also forwards to OpenObserve.
 
-## Initial database config
+## Database config (seeded automatically)
 
-Traces and dashboards stay empty until the current project has a ClickHouse
-database config. Sign in (seeded installs use `user@openlit.io` /
-`openlituser`), select the project in the header, then open **Organisation →
-Projects → Manage DB Config** (or **Connectors → ClickHouse**) and add:
+On first start the OpenLIT entrypoint runs `prisma db seed` and creates an
+active ClickHouse Database Config named **Default DB** (environment
+`production`) from the compose `INIT_DB_*` values:
 
-| Field | Value |
+| Field | Source |
 |---|---|
-| Config Name | `db-config` |
-| Environment | `production` |
-| Username | `default` |
-| Password | `OPENLIT` |
-| Host | `openlit-clickhouse` |
-| Port | `8123` |
-| Database | `openlit` |
-| Query params | leave blank |
+| Host | `INIT_DB_HOST` → `openlit-clickhouse` |
+| Port | `INIT_DB_PORT` → `8123` |
+| Database | `INIT_DB_DATABASE` ← `OPENLIT_DB_NAME` (default `openlit`) |
+| Username | `INIT_DB_USERNAME` ← `OPENLIT_DB_USER` (default `default`) |
+| Password | `INIT_DB_PASSWORD` ← `OPENLIT_DB_PASSWORD` (default `OPENLIT`) |
 
-Save, then mark the config active with the list checkbox or the header
-Databases switcher. OpenLIT checks the connection when the config becomes
-active.
+Sign in with the seeded user `user@openlit.io` / `openlituser`. Traces and
+dashboards should load without a manual Connectors step.
 
-`openlit-clickhouse` is the Compose service name, so it resolves on the Docker
-network. If `.env` overrides `OPENLIT_DB_USER`, `OPENLIT_DB_PASSWORD`, or
-`OPENLIT_DB_NAME`, use those values for username, password, and database.
+`INIT_DB_*` is bootstrap-only. Changing host or credentials later must be done
+in the UI (**Organisation → Projects → Manage DB Config** or **Connectors →
+ClickHouse**), then mark the config active. Do not expect a compose env change
+to rewrite an existing SQLite row on the `openlit-data` volume.
 
 ## Services
 
