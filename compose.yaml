@@ -1,13 +1,14 @@
 # OTLP gateway with pluggable backend profiles.
 #
-# Profiles (pick one backend UI/store):
+# Profiles (one backend, or OpenObserve together with OpenLIT):
 #   openobserve       — self-hosted OpenObserve + gateway
-#   openobserve-cloud — gateway only → OpenObserve Cloud
 #   openlit           — OpenLIT + ClickHouse + gateway
 #   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# Start: ./scripts/start.sh openobserve|openobserve-cloud|openlit|custom
-# Aliases: local → openobserve, cloud → openobserve-cloud
+# Start: ./scripts/start.sh openobserve|openlit|custom
+#        ./scripts/start.sh openobserve openlit
+# Stop:  ./scripts/stop.sh
+# Fan-out command: compose.fanout.yaml (appends both collector configs).
 
 name: ${COMPOSE_PROJECT_NAME:-ai-observability}
 
@@ -15,16 +16,19 @@ services:
   otel-collector:
     profiles:
       - openobserve
-      - openobserve-cloud
       - openlit
       - custom
     image: otel/opentelemetry-collector-contrib:0.163.2
     container_name: otel-collector
     restart: unless-stopped
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    command:
+      # Fan-out replaces this command.
+      - --config=file:/etc/otelcol-contrib/${COLLECTOR_CONFIG:-}
     environment:
       - OPENOBSERVE_OTLP_ENDPOINT=${OPENOBSERVE_OTLP_ENDPOINT:-}
       - OPENOBSERVE_AUTH_HEADER=${OPENOBSERVE_AUTH_HEADER:-}
+      - OPENOBSERVE_ORGANIZATION=${OPENOBSERVE_ORGANIZATION:-}
+      - OPENOBSERVE_TLS_INSECURE=${OPENOBSERVE_TLS_INSECURE:-true}
       - OPENLIT_OTLP_ENDPOINT=${OPENLIT_OTLP_ENDPOINT:-openlit:4317}
       - CUSTOM_OTLP_GRPC_ENDPOINT=${CUSTOM_OTLP_GRPC_ENDPOINT:-}
       - CUSTOM_OTLP_HTTP_ENDPOINT=${CUSTOM_OTLP_HTTP_ENDPOINT:-}
@@ -35,9 +39,7 @@ services:
       - "4318:4318"   # OTLP HTTP
       - "13133:13133" # health
     volumes:
-      - ${OBSERVABILITY_DIR:-.}/collector/${COLLECTOR_CONFIG:-config.openobserve.yaml}:/etc/otelcol-contrib/config.yaml:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ${OBSERVABILITY_DIR:-.}/collector:/etc/otelcol-contrib:ro
     healthcheck:
       test: ["CMD", "/otelcol-contrib", "components"]
       interval: 30s

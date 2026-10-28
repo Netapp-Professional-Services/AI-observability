@@ -1,0 +1,8 @@
+# Loaded with compose.yaml when start.sh runs OpenObserve and OpenLIT together.
+# Replaces the collector command so both configs merge and pipeline lists append.
+services:
+  otel-collector:
+    command:
+      - --feature-gates=confmap.enableMergeAppendOption
+      - --config=file:/etc/otelcol-contrib/config.openobserve.yaml
+      - --config=file:/etc/otelcol-contrib/config.openlit.yaml

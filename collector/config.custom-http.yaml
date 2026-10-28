@@ -5,6 +5,8 @@ receivers:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        # Default is 4 MiB, which rejects trace batches that include prompt content.
+        max_recv_msg_size_mib: 16
       http:
         endpoint: 0.0.0.0:4318
 
@@ -15,7 +17,8 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 400
-    spike_limit_mib: 100
+    spike_limit_mib: 128
+
 exporters:
   otlphttp/custom:
     endpoint: ${env:CUSTOM_OTLP_HTTP_ENDPOINT}
@@ -23,8 +26,6 @@ exporters:
       Authorization: ${env:CUSTOM_OTLP_AUTH_HEADER}
     compression: gzip
     timeout: 30s
-  debug:
-    verbosity: basic
 
 extensions:
   health_check:
@@ -36,7 +37,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlphttp/custom, debug]
+      exporters: [otlphttp/custom]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
@@ -44,7 +45,7 @@ service:
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlphttp/custom, debug]
+      exporters: [otlphttp/custom]
   telemetry:
     logs:
       level: info

@@ -5,8 +5,8 @@ backends. It accepts OTLP over gRPC (`:4317`) and HTTP (`:4318`), then forwards
 traces, metrics, and logs to OpenObserve, OpenLIT, or any compatible backend.
 
 ```text
-OTLP clients → otel-collector → selected backend
-              :4317 / :4318    OpenObserve / OpenLIT / custom OTLP
+OTLP clients → otel-collector → OpenObserve and/or OpenLIT / custom OTLP
+              :4317 / :4318
 ```
 
 ## Quick start
@@ -20,20 +20,20 @@ Open http://localhost:5080/web/ and sign in with the credentials in `.env`.
 Point any OTLP client to `http://localhost:4317` for gRPC or
 `http://localhost:4318` for HTTP.
 
-Aliases: `local` → `openobserve`, `cloud` → `openobserve-cloud`.
-
 ### Supported modes
 
 | Mode | Services | UI |
 |---|---|---|
 | `openobserve` | Gateway + self-hosted OpenObserve | http://localhost:5080 |
-| `openobserve-cloud` | Gateway → OpenObserve Cloud | OpenObserve Cloud |
 | `openlit` | Gateway + OpenLIT + ClickHouse | http://localhost:3000 |
+| `openobserve openlit` | Gateway fans out to both local backends | http://localhost:5080 and http://localhost:3000 |
 | `custom` | Gateway → `CUSTOM_OTLP_*` endpoint | Backend-specific |
+
+The gateway exports to OpenObserve with OTLP/gRPC at `openobserve:5081`. OpenLIT receives OTLP/gRPC at `openlit:4317`. Passing both modes loads both collector configs and appends their pipeline lists, so one client stream reaches both stores.
 
 ```bash
 ./scripts/start.sh openlit
-./scripts/start.sh openobserve-cloud
+./scripts/start.sh openobserve openlit
 ./scripts/start.sh custom
 ```
 
@@ -66,10 +66,10 @@ backend that requires authentication.
 ### Shutdown
 
 ```bash
-docker compose --profile openobserve down
+./scripts/stop.sh
 ```
 
-Use the profile you started (`openlit`, `openobserve-cloud`, or `custom`).
+Stops the gateway and every backend profile. Named volumes are kept.
 
 An OpenObserve dashboard for the DocStream AI path is included at
 [`dashboards/docstream-ai-effective-metrics.dashboard.json`](dashboards/docstream-ai-effective-metrics.dashboard.json).
@@ -80,9 +80,11 @@ See [docs/ai-metrics-dashboard.md](docs/ai-metrics-dashboard.md) to import it.
 ```text
 AI-observability/
 ├── compose.yaml
+├── compose.fanout.yaml
 ├── collector/
 ├── dashboards/docstream-ai-effective-metrics.dashboard.json
 ├── scripts/start.sh
+├── scripts/stop.sh
 ├── docs/
 └── .env.example
 ```
