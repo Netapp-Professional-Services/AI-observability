@@ -71,9 +71,10 @@ backend that requires authentication.
 
 Stops the gateway and every backend profile. Named volumes are kept.
 
-An OpenObserve dashboard for the DocStream AI path is included at
-[`dashboards/docstream-ai-effective-metrics.dashboard.json`](dashboards/docstream-ai-effective-metrics.dashboard.json).
+An OpenObserve **AI Metrics** dashboard (tokens, latency, LLM spans) is at
+[`dashboards/ai-metrics.dashboard.json`](dashboards/ai-metrics.dashboard.json).
 See [docs/ai-metrics-dashboard.md](docs/ai-metrics-dashboard.md) to import it.
+For Langflow token capture, use the **OpenAI** endpoint — not OpenAI Compatible.
 
 ## Layout
 
@@ -82,7 +83,7 @@ AI-observability/
 ├── compose.yaml
 ├── compose.fanout.yaml
 ├── collector/
-├── dashboards/docstream-ai-effective-metrics.dashboard.json
+├── dashboards/ai-metrics.dashboard.json
 ├── scripts/start.sh
 ├── scripts/stop.sh
 ├── docs/

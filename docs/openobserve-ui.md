@@ -9,9 +9,10 @@ Start the local backend with:
 Open http://127.0.0.1:5080/web/ and sign in with `ZO_ROOT_USER_EMAIL` and
 `ZO_ROOT_USER_PASSWORD` from `.env`.
 
-The DocStream dashboard JSON is
-[`dashboards/docstream-ai-effective-metrics.dashboard.json`](../dashboards/docstream-ai-effective-metrics.dashboard.json).
-Import steps are in [ai-metrics-dashboard.md](ai-metrics-dashboard.md).
+The AI Metrics dashboard JSON is
+[`dashboards/ai-metrics.dashboard.json`](../dashboards/ai-metrics.dashboard.json).
+Import steps and the Langflow OpenAI-endpoint note are in
+[ai-metrics-dashboard.md](ai-metrics-dashboard.md).
 
 ## Traces and logs
 
