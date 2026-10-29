@@ -1,65 +1,92 @@
-# DocStream AI Effective Metrics (OpenObserve)
+# AI Metrics (OpenObserve)
 
-Dashboard for the AI path you can see **today** from OpenObserve, plus how to grow into true LLM metrics later.
+Dashboard for GenAI token usage, LLM latency, and chat spans forwarded through
+this gateway.
 
 UI: http://127.0.0.1:5080/web/  
-Import JSON: [`dashboards/docstream-ai-effective-metrics.dashboard.json`](../dashboards/docstream-ai-effective-metrics.dashboard.json)
+Import JSON: [`dashboards/ai-metrics.dashboard.json`](../dashboards/ai-metrics.dashboard.json)
 
-If already imported locally: **Dashboards → DocStream AI Effective Metrics**  
+If already imported locally: **Dashboards → AI Metrics**  
 Direct view (folder `default`):  
-http://127.0.0.1:5080/web/dashboards/view?dashboard=7513442570895098663&folder=default&org_identifier=default
+http://127.0.0.1:5080/web/dashboards/view?dashboard=7521576713868805516&folder=default&org_identifier=default
 
-## What “effective AI metrics” means here
+The older container-proxy dashboard
+([`dashboards/docstream-ai-effective-metrics.dashboard.json`](../dashboards/docstream-ai-effective-metrics.dashboard.json))
+is kept for reference; prefer **AI Metrics** for token/latency views.
 
-DocStream’s AI loop is:
+## Langflow: OpenAI vs OpenAI Compatible
 
-```text
-S3/Confluence → ingest + Tika → OpenSearch (embed/index)
-                                      ↑
-Langflow playground → NetApp LLM proxy
-         ↓
-  OpenSearch MCP (tools / RAG)
-```
+To capture token metrics from Langflow, configure the model with the **OpenAI**
+endpoint / component — **not** **OpenAI Compatible**.
 
-Until Langflow emits LLM OTLP (needs **1.12+**; stack is on **1.11.5**) or you use **Langfuse**, OpenObserve does **not** have token/latency/cost series. The gateway forwards OTLP traces, metrics, and logs only. It does not scrape Docker container metrics or container log files.
+The OpenAI Compatible path often omits usage fields on the response, so OTEL
+never sees `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` or the
+`gen_ai.client.token.usage` metric. With the OpenAI endpoint, usage is present
+and the **AI Metrics** dashboard can chart tokens and duration.
 
-The imported dashboard still queries `container_*` series. Those panels stay empty. Logs in stream `docstream` still arrive from `./scripts/seed-demo-data.sh` or from an application sending OTLP logs.
+Point Langflow’s OTLP exporter at this gateway:
 
-## Dashboard layout
+| Protocol | Endpoint |
+|----------|----------|
+| gRPC | `http://localhost:4317` |
+| HTTP | `http://localhost:4318` |
 
-### Tab: AI path (PromQL / Metrics)
+## What the dashboard shows
 
-These panels query `container_*` metrics. The collector no longer produces them, so the tab stays empty.
+### Tab: Tokens & latency (PromQL)
 
-### Tab: Logs (SQL / stream `docstream`)
+| Panel | Query focus |
+|-------|-------------|
+| Input / output / total tokens | `gen_ai_client_token_usage_sum` (`gen_ai_token_type`) |
+| Avg LLM duration | `gen_ai_client_operation_duration_sum` / `_count` |
+| Tokens by type / model / provider | Same metric, grouped by label |
+| Duration by model | Duration histogram sum/count by `gen_ai_request_model` |
+
+OpenObserve stores OTEL metric names with `.` → `_`
+(`gen_ai.client.token.usage` → `gen_ai_client_token_usage_*`).
+
+### Tab: LLM spans (SQL / traces stream `default`)
 
 | Panel | Notes |
 |-------|--------|
-| Event / error counts | Heuristic on `message` / `level` |
-| Events by service | Volume by `service` |
-| Recent logs | Filled by OTLP logs or `./scripts/seed-demo-data.sh` |
+| Span counts / errors | Rows with `gen_ai_operation_name` |
+| Input / output tokens | `CAST(gen_ai_usage_*_tokens AS BIGINT)` |
+| Tokens over time / by model | Span attributes from chat calls |
+| Recent LLM spans | Model, provider, tokens, `trace_id` |
+
+## Seed sample GenAI data
+
+With the OpenObserve profile running:
+
+```bash
+./scripts/seed-demo-data.sh
+```
+
+This sends a generic demo span/log plus a `langflow` chat span and
+`gen_ai.client.*` histograms so the dashboard is not empty before a real flow
+runs.
 
 ## Import / re-import
 
 ```bash
-# UI: Dashboards → Import → paste or upload
-#   dashboards/docstream-ai-effective-metrics.dashboard.json
+# UI: Dashboards → Import → upload
+#   dashboards/ai-metrics.dashboard.json
 
 # Or API:
 source .env
 curl -s -u "${ZO_ROOT_USER_EMAIL}:${ZO_ROOT_USER_PASSWORD}" \
   -H 'Content-Type: application/json' \
   -X POST 'http://127.0.0.1:5080/api/default/dashboards' \
-  --data-binary @dashboards/docstream-ai-effective-metrics.dashboard.json
+  --data-binary @dashboards/ai-metrics.dashboard.json
 ```
 
-## Phase 2 — real AI metrics (not in this dashboard yet)
+Also useful: OpenObserve **AI → Monitor → Insights** if your edition exposes
+built-in LLM monitoring on the same GenAI spans.
 
-| Goal | How |
-|------|-----|
-| Tokens, latency, model, cost | Langfuse (`LANGFUSE_*` in DocStream `.env`) — keep as agent truth |
-| Spans in OpenObserve Traces | Bump Langflow to **1.12+** so `OTEL_*` is live |
-| Structured ingest metrics | Add counters in ingest-service (docs indexed, Tika failures) → OTLP |
-| Live app logs | Send application logs over OTLP to the gateway |
+## Empty panels checklist
 
-Recommended split: **Langfuse = LLM quality/cost**, **OpenObserve = OTLP traces, metrics, and logs**.
+1. Gateway + OpenObserve are up (`./scripts/start.sh openobserve`).
+2. Langflow (or another client) exports OTLP to `:4317` / `:4318`.
+3. Langflow uses the **OpenAI** endpoint, not OpenAI Compatible.
+4. Time range on the dashboard covers when the chat ran (default **1h**).
+5. Or run `./scripts/seed-demo-data.sh` to inject demo GenAI telemetry.
