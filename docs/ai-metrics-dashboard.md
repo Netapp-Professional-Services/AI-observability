@@ -45,6 +45,10 @@ Point Langflow’s OTLP exporter at this gateway:
 OpenObserve stores OTEL metric names with `.` → `_`
 (`gen_ai.client.token.usage` → `gen_ai_client_token_usage_*`).
 
+PromQL panel legends use **single** braces for label values
+(`{gen_ai_request_model}`). Double braces (`{{...}}`) are dashboard variables
+and will show literally in the UI.
+
 ### Tab: LLM spans (SQL / traces stream `default`)
 
 | Panel | Notes |

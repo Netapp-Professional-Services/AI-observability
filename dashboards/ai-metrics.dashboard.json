@@ -501,7 +501,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{gen_ai_token_type}}",
+                "promql_legend": "{gen_ai_token_type}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -602,7 +602,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{gen_ai_request_model}}",
+                "promql_legend": "{gen_ai_request_model}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -703,7 +703,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{gen_ai_request_model}}",
+                "promql_legend": "{gen_ai_request_model}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -804,7 +804,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{gen_ai_provider_name}}",
+                "promql_legend": "{gen_ai_provider_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
