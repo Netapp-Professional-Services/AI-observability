@@ -45,7 +45,7 @@ to rewrite an existing SQLite row on the `openlit-data` volume.
 ## Evaluation judge endpoint
 
 Evaluations → For OpenAI-compatible judge. Set
-`OPENAI_BASE_URL` in `.env` (include `/v1`). 
+`OPENAI_BASE_URL` in `.env` (include `/v1`).
 
 For a private CA or self-signed certificate, build a PEM the same way as a
 public-plus-internal bundle: start with the Mozilla CA bundle or the macOS
@@ -80,6 +80,8 @@ OPENLIT_CA_BUNDLE=/Users/your-user/openlit-ca-bundle.pem
 `OPENLIT_CA_BUNDLE` is set. That overlay mounts the file read-only at
 `/tmp/custom-ca-bundle.pem` and sets `NODE_EXTRA_CA_CERTS`, which appends the
 bundle to Node's public trust store. Certificate verification stays enabled.
+The path must be an existing PEM file — if it is missing, Docker may create a
+directory at that path and the mount will not work as a CA bundle.
 Recreate the container after changing either variable.
 
 ## Services
