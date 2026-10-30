@@ -192,6 +192,9 @@ compose_args=(-f "${ROOT}/compose.yaml")
 if [[ "${FANOUT}" -eq 1 ]]; then
   compose_args+=(-f "${ROOT}/compose.fanout.yaml")
 fi
+if [[ -n "${OPENLIT_CA_BUNDLE:-}" ]]; then
+  compose_args+=(-f "${ROOT}/compose.openlit-ca.yaml")
+fi
 for profile in "${PROFILES[@]}"; do
   compose_args+=(--profile "${profile}")
 done

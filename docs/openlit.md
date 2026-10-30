@@ -42,6 +42,46 @@ in the UI (**Organisation → Projects → Manage DB Config** or **Connectors �
 ClickHouse**), then mark the config active. Do not expect a compose env change
 to rewrite an existing SQLite row on the `openlit-data` volume.
 
+## Evaluation judge endpoint
+
+Evaluations → For OpenAI-compatible judge. Set
+`OPENAI_BASE_URL` in `.env` (include `/v1`). 
+
+For a private CA or self-signed certificate, build a PEM the same way as a
+public-plus-internal bundle: start with the Mozilla CA bundle or the macOS
+system roots, then append the endpoint's issuing and root certificates. Do not
+use a leaf certificate as the trust anchor.
+
+```bash
+curl -fsSL https://curl.se/ca/cacert.pem -o ~/public-ca-bundle.pem
+cat ~/public-ca-bundle.pem > ~/openlit-ca-bundle.pem
+security find-certificate -a -p -c 'YOUR-ISSUING-CA-NAME' \
+  /Library/Keychains/System.keychain >> ~/openlit-ca-bundle.pem
+security find-certificate -a -p -c 'YOUR-ROOT-CA-NAME' \
+  /Library/Keychains/System.keychain >> ~/openlit-ca-bundle.pem
+chmod 644 ~/openlit-ca-bundle.pem
+```
+
+On a Mac, the public roots can come from the system keychain instead of curl.se:
+
+```bash
+security find-certificate -a -p \
+  /System/Library/Keychains/SystemRootCertificates.keychain > ~/public-ca-bundle.pem
+```
+
+Set the path in `.env`:
+
+```dotenv
+OPENAI_BASE_URL=https://your-gateway.example/v1
+OPENLIT_CA_BUNDLE=/Users/your-user/openlit-ca-bundle.pem
+```
+
+`./scripts/start.sh openlit` includes `compose.openlit-ca.yaml` only when
+`OPENLIT_CA_BUNDLE` is set. That overlay mounts the file read-only at
+`/tmp/custom-ca-bundle.pem` and sets `NODE_EXTRA_CA_CERTS`, which appends the
+bundle to Node's public trust store. Certificate verification stays enabled.
+Recreate the container after changing either variable.
+
 ## Services
 
 | Service | Role |
