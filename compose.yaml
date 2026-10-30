@@ -1,14 +1,16 @@
 # OTLP gateway with pluggable backend profiles.
 #
-# Profiles (one backend, or OpenObserve together with OpenLIT):
+# Profiles (one or more local backends, or custom alone):
 #   openobserve       — self-hosted OpenObserve + gateway
 #   openlit           — OpenLIT + ClickHouse + gateway
+#   victoriametrics   — VictoriaMetrics (metrics) + gateway
 #   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# Start: ./scripts/start.sh openobserve|openlit|custom
+# Start: ./scripts/start.sh openobserve|openlit|victoriametrics|custom
 #        ./scripts/start.sh openobserve openlit
+#        ./scripts/start.sh openobserve victoriametrics
 # Stop:  ./scripts/stop.sh
-# Fan-out command: compose.fanout.yaml (appends both collector configs).
+# Fan-out command: compose.fanout.yaml (appends selected collector configs).
 
 name: ${COMPOSE_PROJECT_NAME:-ai-observability}
 
@@ -17,6 +19,7 @@ services:
     profiles:
       - openobserve
       - openlit
+      - victoriametrics
       - custom
     image: otel/opentelemetry-collector-contrib:0.163.2
     container_name: otel-collector
@@ -30,6 +33,8 @@ services:
       - OPENOBSERVE_ORGANIZATION=${OPENOBSERVE_ORGANIZATION:-}
       - OPENOBSERVE_TLS_INSECURE=${OPENOBSERVE_TLS_INSECURE:-true}
       - OPENLIT_OTLP_ENDPOINT=${OPENLIT_OTLP_ENDPOINT:-openlit:4317}
+      - VICTORIAMETRICS_OTLP_METRICS_ENDPOINT=${VICTORIAMETRICS_OTLP_METRICS_ENDPOINT:-}
+      - VICTORIAMETRICS_TLS_INSECURE=${VICTORIAMETRICS_TLS_INSECURE:-true}
       - CUSTOM_OTLP_GRPC_ENDPOINT=${CUSTOM_OTLP_GRPC_ENDPOINT:-}
       - CUSTOM_OTLP_HTTP_ENDPOINT=${CUSTOM_OTLP_HTTP_ENDPOINT:-}
       - CUSTOM_OTLP_AUTH_HEADER=${CUSTOM_OTLP_AUTH_HEADER:-}
@@ -133,7 +138,24 @@ services:
       retries: 10
       start_period: 30s
 
+  victoriametrics:
+    profiles:
+      - victoriametrics
+    image: victoriametrics/victoria-metrics:v1.119.0
+    container_name: victoriametrics
+    restart: unless-stopped
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=${VICTORIAMETRICS_RETENTION:-30d}
+      - -httpListenAddr=:8428
+      - -opentelemetry.usePrometheusNaming
+    ports:
+      - "${VICTORIAMETRICS_UI_PORT:-8428}:8428"
+    volumes:
+      - ${VICTORIAMETRICS_DATA_DIR:-victoriametrics-data}:/storage
+
 volumes:
   openobserve-data:
   openlit-clickhouse-data:
   openlit-data:
+  victoriametrics-data:
