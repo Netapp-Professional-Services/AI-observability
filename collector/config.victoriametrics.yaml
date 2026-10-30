@@ -1,0 +1,60 @@
+# Gateway collector → VictoriaMetrics (OTLP/HTTP metrics).
+# Traces/logs are accepted then dropped (nop) so the gateway still serves
+# :4317/:4318 for all signals. Pair with OpenObserve/OpenLIT to store them.
+# UI: http://localhost:8428/vmui/
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        # Default is 4 MiB, which rejects trace batches that include prompt content.
+        max_recv_msg_size_mib: 16
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 400
+    spike_limit_mib: 128
+
+exporters:
+  nop: {}
+  otlp_http/victoriametrics:
+    compression: gzip
+    encoding: proto
+    metrics_endpoint: ${env:VICTORIAMETRICS_OTLP_METRICS_ENDPOINT}
+    tls:
+      insecure: ${env:VICTORIAMETRICS_TLS_INSECURE}
+    timeout: 30s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [nop]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/victoriametrics]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [nop]
+  telemetry:
+    logs:
+      level: info

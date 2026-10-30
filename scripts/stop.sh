@@ -6,7 +6,8 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/stop.sh
 
-Stops the gateway and every backend profile (openobserve, openlit, custom).
+Stops the gateway and every backend profile
+(openobserve, openlit, victoriametrics, custom).
 Named volumes are kept.
 EOF
 }
@@ -53,9 +54,20 @@ fi
 echo "Project: ${COMPOSE_PROJECT_NAME}"
 echo "Stopping all profiles"
 
+compose_args=(-f "${ROOT}/compose.yaml")
+if [[ -f "${ROOT}/compose.fanout.generated.yaml" ]]; then
+  compose_args+=(-f "${ROOT}/compose.fanout.generated.yaml")
+elif [[ -f "${ROOT}/compose.fanout.yaml" ]]; then
+  compose_args+=(-f "${ROOT}/compose.fanout.yaml")
+fi
+if [[ -n "${OPENLIT_CA_BUNDLE:-}" ]]; then
+  compose_args+=(-f "${ROOT}/compose.openlit-ca.yaml")
+fi
+
 "${COMPOSE[@]}" \
-  -f "${ROOT}/compose.yaml" \
+  "${compose_args[@]}" \
   --profile openobserve \
   --profile openlit \
+  --profile victoriametrics \
   --profile custom \
   down --remove-orphans

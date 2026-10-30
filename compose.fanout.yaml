@@ -1,5 +1,7 @@
-# Loaded with compose.yaml when start.sh runs OpenObserve and OpenLIT together.
-# Replaces the collector command so both configs merge and pipeline lists append.
+# Loaded by start.sh when two or more local backends are selected.
+# Replaces the collector command so configs merge and pipeline lists append.
+# start.sh rewrites the --config lines for the selected modes; the two-file
+# example below is the openobserve + openlit default shape.
 services:
   otel-collector:
     command:
