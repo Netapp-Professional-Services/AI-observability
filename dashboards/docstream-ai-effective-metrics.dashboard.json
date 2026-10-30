@@ -89,7 +89,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -190,7 +190,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -291,7 +291,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -392,7 +392,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -493,7 +493,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -594,7 +594,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -695,7 +695,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -796,7 +796,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -897,7 +897,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -998,7 +998,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -1099,7 +1099,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -1200,7 +1200,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
@@ -1301,7 +1301,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{{container_name}}",
+                "promql_legend": "{container_name}",
                 "layer_type": "scatter",
                 "weight_fixed": 1,
                 "limit": 0,
