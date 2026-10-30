@@ -108,6 +108,7 @@ services:
       - SQLITE_DATABASE_URL=file:/app/client/data/data.db
       - PORT=${OPENLIT_UI_PORT:-3000}
       - DOCKER_PORT=${OPENLIT_UI_PORT:-3000}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
     ports:
       - "${OPENLIT_UI_PORT:-3000}:${OPENLIT_UI_PORT:-3000}"
       # OTLP stays internal — clients send to otel-collector, which fans in here.

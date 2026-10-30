@@ -1,0 +1,6 @@
+services:
+  openlit:
+    environment:
+      NODE_EXTRA_CA_CERTS: /tmp/custom-ca-bundle.pem
+    volumes:
+      - ${OPENLIT_CA_BUNDLE:?OPENLIT_CA_BUNDLE must point to a PEM CA bundle}:/tmp/custom-ca-bundle.pem:ro
