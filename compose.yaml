@@ -4,15 +4,20 @@
 #   openobserve       — self-hosted OpenObserve + gateway
 #   openlit           — OpenLIT + ClickHouse + gateway
 #   victoriametrics   — VictoriaMetrics (metrics) + gateway
+#   signoz            — SigNoz (ClickHouse, Keeper, Postgres) + gateway
 #   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# Start: ./scripts/start.sh openobserve|openlit|victoriametrics|custom
+# Start: ./scripts/start.sh openobserve|openlit|victoriametrics|signoz|custom
 #        ./scripts/start.sh openobserve openlit
-#        ./scripts/start.sh openobserve victoriametrics
+#        ./scripts/start.sh openobserve signoz
 # Stop:  ./scripts/stop.sh
 # Fan-out command: compose.fanout.yaml (appends selected collector configs).
+# SigNoz services: signoz/compose.yaml (included below).
 
 name: ${COMPOSE_PROJECT_NAME:-ai-observability}
+
+include:
+  - path: signoz/compose.yaml
 
 services:
   otel-collector:
@@ -20,6 +25,7 @@ services:
       - openobserve
       - openlit
       - victoriametrics
+      - signoz
       - custom
     image: otel/opentelemetry-collector-contrib:0.163.2
     container_name: otel-collector
@@ -35,6 +41,7 @@ services:
       - OPENLIT_OTLP_ENDPOINT=${OPENLIT_OTLP_ENDPOINT:-openlit:4317}
       - VICTORIAMETRICS_OTLP_METRICS_ENDPOINT=${VICTORIAMETRICS_OTLP_METRICS_ENDPOINT:-}
       - VICTORIAMETRICS_TLS_INSECURE=${VICTORIAMETRICS_TLS_INSECURE:-true}
+      - SIGNOZ_OTLP_ENDPOINT=${SIGNOZ_OTLP_ENDPOINT:-signoz-ingester:4317}
       - CUSTOM_OTLP_GRPC_ENDPOINT=${CUSTOM_OTLP_GRPC_ENDPOINT:-}
       - CUSTOM_OTLP_HTTP_ENDPOINT=${CUSTOM_OTLP_HTTP_ENDPOINT:-}
       - CUSTOM_OTLP_AUTH_HEADER=${CUSTOM_OTLP_AUTH_HEADER:-}
