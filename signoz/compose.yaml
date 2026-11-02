@@ -179,6 +179,8 @@ services:
     environment:
       - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://signoz-telemetrystore-clickhouse-0-0:9000
       - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+      # Required by clickhousetraces in ingester.yaml; unset fails config load.
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
     volumes:
       - ./ingester/ingester.yaml:/etc/otel-collector-config.yaml:ro
       - ./ingester/opamp.yaml:/etc/opamp-config.yaml:ro
