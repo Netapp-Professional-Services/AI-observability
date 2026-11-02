@@ -4,14 +4,17 @@ Dashboard for GenAI token usage, LLM latency, and chat spans forwarded through
 this gateway.
 
 UI: http://127.0.0.1:5080/web/  
-Import JSON: [`dashboards/ai-metrics.dashboard.json`](../dashboards/ai-metrics.dashboard.json)
+JSON: [`dashboards/openobserve/ai-metrics.dashboard.json`](../dashboards/openobserve/ai-metrics.dashboard.json)
+
+Import it with the other sample dashboards. See the
+[README](../README.md#dashboards).
 
 If already imported locally: **Dashboards → AI Metrics**  
 Direct view (folder `default`):  
 http://127.0.0.1:5080/web/dashboards/view?dashboard=7521576713868805516&folder=default&org_identifier=default
 
 The older container-proxy dashboard
-([`dashboards/docstream-ai-effective-metrics.dashboard.json`](../dashboards/docstream-ai-effective-metrics.dashboard.json))
+([`dashboards/openobserve/docstream-ai-effective-metrics.dashboard.json`](../dashboards/openobserve/docstream-ai-effective-metrics.dashboard.json))
 is kept for reference; prefer **AI Metrics** for token/latency views.
 
 ## Langflow: OpenAI vs OpenAI Compatible
@@ -69,20 +72,6 @@ With the OpenObserve profile running:
 This sends a generic demo span/log plus a `langflow` chat span and
 `gen_ai.client.*` histograms so the dashboard is not empty before a real flow
 runs.
-
-## Import / re-import
-
-```bash
-# UI: Dashboards → Import → upload
-#   dashboards/ai-metrics.dashboard.json
-
-# Or API:
-source .env
-curl -s -u "${ZO_ROOT_USER_EMAIL}:${ZO_ROOT_USER_PASSWORD}" \
-  -H 'Content-Type: application/json' \
-  -X POST 'http://127.0.0.1:5080/api/default/dashboards' \
-  --data-binary @dashboards/ai-metrics.dashboard.json
-```
 
 Also useful: OpenObserve **AI → Monitor → Insights** if your edition exposes
 built-in LLM monitoring on the same GenAI spans.

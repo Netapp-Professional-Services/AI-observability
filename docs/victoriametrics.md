@@ -2,7 +2,7 @@
 
 [VictoriaMetrics](https://docs.victoriametrics.com/) stores **metrics** from the
 gateway (OTLP/HTTP). Traces and logs are still accepted on the gateway ports but
-dropped unless you also select OpenObserve or OpenLIT.
+dropped unless you also select OpenObserve, OpenLIT, or SigNoz.
 
 UI (vmui): http://localhost:8428/vmui/
 
@@ -18,6 +18,7 @@ Fan out metrics (and other signals to the other backends):
 ./scripts/start.sh openobserve victoriametrics
 ./scripts/start.sh openlit victoriametrics
 ./scripts/start.sh openobserve openlit victoriametrics
+./scripts/start.sh signoz victoriametrics
 ```
 
 Send client telemetry to the gateway at `localhost:4317` (gRPC) or

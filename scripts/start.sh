@@ -10,13 +10,17 @@ Modes:
   openobserve                         Self-hosted OpenObserve
   openlit                             Self-hosted OpenLIT
   victoriametrics                     Self-hosted VictoriaMetrics (metrics)
+  signoz                              Self-hosted SigNoz
   openobserve openlit                 Fan out to both backends
+  openobserve signoz                  Fan out to OpenObserve and SigNoz
+  openobserve openlit signoz          Fan out to all three trace backends
   openobserve victoriametrics         Fan out (metrics also to VM)
-  openobserve openlit victoriametrics Fan out to all three
   custom                              Any OTLP-compatible backend
 
 custom cannot be combined with another mode.
-VictoriaMetrics stores metrics only; combine with OpenObserve/OpenLIT for traces/logs.
+Any mix of the local backends is valid.
+VictoriaMetrics stores metrics only; combine it with OpenObserve, OpenLIT, or SigNoz for traces and logs.
+SigNoz needs about 4 GB of Docker memory.
 EOF
 }
 
@@ -28,7 +32,7 @@ fi
 MODES=()
 for arg in "$@"; do
   case "${arg}" in
-    openobserve|openlit|victoriametrics|custom) MODES+=("${arg}") ;;
+    openobserve|openlit|victoriametrics|signoz|custom) MODES+=("${arg}") ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 1 ;;
   esac
@@ -124,6 +128,15 @@ setup_victoriametrics() {
   CONFIGS+=(config.victoriametrics.yaml)
 }
 
+setup_signoz() {
+  export SIGNOZ_OTLP_ENDPOINT="$(normalize_grpc_endpoint "${SIGNOZ_OTLP_ENDPOINT:-signoz-ingester:4317}")"
+  require_grpc_hostport SIGNOZ_OTLP_ENDPOINT "${SIGNOZ_OTLP_ENDPOINT}"
+  export SIGNOZ_UI_PORT="${SIGNOZ_UI_PORT:-8080}"
+  PROFILES+=(signoz)
+  BACKENDS+=("SigNoz (${SIGNOZ_OTLP_ENDPOINT})")
+  CONFIGS+=(config.signoz.yaml)
+}
+
 setup_custom() {
   : "${CUSTOM_OTLP_ENDPOINT:?Set CUSTOM_OTLP_ENDPOINT in .env for custom mode}"
   PROTOCOL="$(printf '%s' "${CUSTOM_OTLP_PROTOCOL:-grpc}" | tr '[:upper:]' '[:lower:]')"
@@ -158,6 +171,9 @@ if has_mode openlit; then
 fi
 if has_mode victoriametrics; then
   setup_victoriametrics
+fi
+if has_mode signoz; then
+  setup_signoz
 fi
 if has_mode custom; then
   setup_custom
@@ -233,4 +249,7 @@ if has_mode openlit; then
 fi
 if has_mode victoriametrics; then
   echo "VictoriaMetrics UI (vmui):       http://localhost:${VICTORIAMETRICS_UI_PORT:-8428}/vmui/"
+fi
+if has_mode signoz; then
+  echo "SigNoz UI:                       http://localhost:${SIGNOZ_UI_PORT:-8080}"
 fi

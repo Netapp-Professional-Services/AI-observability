@@ -7,7 +7,7 @@ usage() {
 Usage: ./scripts/stop.sh
 
 Stops the gateway and every backend profile
-(openobserve, openlit, victoriametrics, custom).
+(openobserve, openlit, victoriametrics, signoz, custom).
 Named volumes are kept.
 EOF
 }
@@ -69,5 +69,6 @@ fi
   --profile openobserve \
   --profile openlit \
   --profile victoriametrics \
+  --profile signoz \
   --profile custom \
   down --remove-orphans
