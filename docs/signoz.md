@@ -112,6 +112,13 @@ prices; enabled **User override** rules are left in place.
 Set `SIGNOZ_LLM_PROVIDERS` to a comma-separated list of OpenRouter prefixes
 (for example `openai,anthropic`) to limit which providers are synced.
 
+## Dashboards
+
+Sample SigNoz dashboards are JSON files in
+[`dashboards/signoz/`](../dashboards/signoz/). Import the ones you need.
+How to import, for SigNoz and the other backends, is in the
+[README](../README.md#dashboards).
+
 ## Regenerate from Foundry
 
 `./scripts/start.sh` does not call Foundry. To refresh the vendored files,

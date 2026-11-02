@@ -9,9 +9,10 @@ Start the local backend with:
 Open http://127.0.0.1:5080/web/ and sign in with `ZO_ROOT_USER_EMAIL` and
 `ZO_ROOT_USER_PASSWORD` from `.env`.
 
-The AI Metrics dashboard JSON is
-[`dashboards/ai-metrics.dashboard.json`](../dashboards/ai-metrics.dashboard.json).
-Import steps and the Langflow OpenAI-endpoint note are in
+Sample dashboards for this backend are in
+[`dashboards/openobserve/`](../dashboards/openobserve/). Import them with the
+steps in the [README](../README.md#dashboards). What the AI Metrics panels show,
+and the Langflow OpenAI-endpoint note, are in
 [ai-metrics-dashboard.md](ai-metrics-dashboard.md).
 
 ## Traces and logs

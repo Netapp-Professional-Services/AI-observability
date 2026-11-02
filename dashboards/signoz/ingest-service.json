@@ -1,0 +1,1340 @@
+{
+  "schemaVersion": "v6",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "service",
+      "value": "ingest-service"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Ingest service",
+      "description": "Index jobs, dependency calls, and logs for ingest-service. Built from auto-instrumented traces and logs. Indexed, skipped, and per-document error counts are in the log lines. /health is not traced."
+    },
+    "variables": [],
+    "panels": {
+      "259508ca-7f93-58b8-b9cb-6f4ef2b7927c": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index jobs",
+            "description": "Server spans for POST /index-s3, /index-confluence, and /index-sharepoint."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "53caa432-27b2-5034-8e16-a7a46ff4455e": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Failed index jobs",
+            "description": "Jobs that returned HTTP 4xx or 5xx. A 400 means the sync reported ok=false."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint') AND (responseStatusCode LIKE '4%' OR responseStatusCode LIKE '5%')"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "dd43430d-fd57-5112-8f63-5821578cc31a": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index job p95 duration",
+            "description": "95th percentile duration of index jobs in the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "unit": "ns",
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                    },
+                    "groupBy": [],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "",
+                    "aggregations": [
+                      {
+                        "expression": "p95(durationNano)"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "26bd5a11-092b-543e-9892-49d75c71954d": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index job rate",
+            "description": "Index jobs per second by route."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "reqps",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "httpRoute",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{httpRoute}}",
+                    "aggregations": [
+                      {
+                        "expression": "rate()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "ef079ccc-12c7-5bed-b61a-ebe28a512672": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Status code rate",
+            "description": "Index job rate by route and HTTP status code."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "reqps",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint') AND responseStatusCode EXISTS"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "httpRoute",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      },
+                      {
+                        "name": "responseStatusCode",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{httpRoute}} - {{responseStatusCode}}",
+                    "aggregations": [
+                      {
+                        "expression": "rate()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "56df1334-859b-5104-9454-ff22764584a1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index job p95 duration by route",
+            "description": "95th percentile duration of each index route."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ns",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "httpRoute",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{httpRoute}}",
+                    "aggregations": [
+                      {
+                        "expression": "p95(durationNano)"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "7265866e-95c2-5703-9830-f533b8f3d3d5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index routes",
+            "description": "Count, average duration, and p95 duration for each index route."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": {
+                  "B": "ns",
+                  "C": "ns"
+                },
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "httpRoute",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "httpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [
+                            {
+                              "key": {
+                                "name": "count()",
+                                "signal": "",
+                                "fieldContext": "",
+                                "fieldDataType": ""
+                              },
+                              "direction": "desc"
+                            }
+                          ],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "Count",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "httpRoute",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "httpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "Avg Duration",
+                          "aggregations": [
+                            {
+                              "expression": "avg(durationNano)"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "C",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "httpRoute",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "httpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "P95 Duration",
+                          "aggregations": [
+                            {
+                              "expression": "p95(durationNano)"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "f42c1951-f11a-5f01-b060-2895196c2bd9": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Slowest index jobs",
+            "description": "The ten slowest index-job server spans in the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/ListPanel",
+            "spec": {
+              "selectFields": [
+                {
+                  "name": "name",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "string"
+                },
+                {
+                  "name": "httpRoute",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "string"
+                },
+                {
+                  "name": "responseStatusCode",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "string"
+                },
+                {
+                  "name": "durationNano",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "number"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "raw",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Server' AND httpRoute IN ('/index-s3', '/index-confluence', '/index-sharepoint')"
+                    },
+                    "groupBy": [],
+                    "order": [
+                      {
+                        "key": {
+                          "name": "durationNano",
+                          "signal": "",
+                          "fieldContext": "",
+                          "fieldDataType": ""
+                        },
+                        "direction": "desc"
+                      }
+                    ],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "",
+                    "limit": 10
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "e93abfd7-e8f8-52dc-a2df-9e4d3a01d307": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Dependency call rate",
+            "description": "Client spans per second by span name. Includes S3 operations and outbound HTTP calls."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "reqps",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Client'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "name",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{name}}",
+                    "aggregations": [
+                      {
+                        "expression": "rate()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "92435e22-df86-5082-a170-77dbb73ee048": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Dependency p90 duration",
+            "description": "90th percentile duration of client spans by span name."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "ns",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "traces",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "serviceName = 'ingest-service' AND spanKind = 'Client'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "name",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{name}}",
+                    "aggregations": [
+                      {
+                        "expression": "p90(durationNano)"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "37e4a3e5-d670-58e0-a859-cdad0de35715": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "External HTTP calls",
+            "description": "Outbound HTTP calls with a URL attribute, such as Tika, Confluence, Microsoft Graph, and OpenSearch."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "columnUnits": {
+                  "B": "reqps",
+                  "C": "ns"
+                },
+                "decimalPrecision": "2"
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND externalHttpUrl EXISTS AND externalHttpMethod EXISTS"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "externalHttpUrl",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "externalHttpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [
+                            {
+                              "key": {
+                                "name": "count()",
+                                "signal": "",
+                                "fieldContext": "",
+                                "fieldDataType": ""
+                              },
+                              "direction": "desc"
+                            }
+                          ],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "Total Calls",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND externalHttpUrl EXISTS AND externalHttpMethod EXISTS"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "externalHttpUrl",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "externalHttpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "Request Rate",
+                          "aggregations": [
+                            {
+                              "expression": "rate()"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "C",
+                          "stepInterval": 60,
+                          "signal": "traces",
+                          "source": "",
+                          "disabled": false,
+                          "filter": {
+                            "expression": "serviceName = 'ingest-service' AND externalHttpUrl EXISTS AND externalHttpMethod EXISTS"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "externalHttpUrl",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            },
+                            {
+                              "name": "externalHttpMethod",
+                              "signal": "",
+                              "fieldContext": "",
+                              "fieldDataType": "string"
+                            }
+                          ],
+                          "order": [],
+                          "having": {
+                            "expression": ""
+                          },
+                          "functions": [],
+                          "legend": "P90 Duration",
+                          "aggregations": [
+                            {
+                              "expression": "p90(durationNano)"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "0304bb58-e3e3-579d-804d-9b26a5ca7f21": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Log volume by severity",
+            "description": "Log records for ingest-service."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time",
+                "fillSpans": false
+              },
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "chartAppearance": {
+                "lineInterpolation": "spline",
+                "showPoints": false,
+                "lineStyle": "solid",
+                "fillMode": "none",
+                "spanGaps": {
+                  "fillOnlyBelow": false,
+                  "fillLessThan": ""
+                }
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 0,
+                "isLogScale": false
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": null
+              },
+              "thresholds": null
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "logs",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "service.name = 'ingest-service'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "severity_text",
+                        "signal": "",
+                        "fieldContext": "",
+                        "fieldDataType": "string"
+                      }
+                    ],
+                    "order": [],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "{{severity_text}}",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      },
+      "d1d98032-bec0-54b9-9e88-e1ded899d4f6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Index errors and results",
+            "description": "Errors, warnings, and index finished or failed lines. Finished lines include indexed, skipped, and errors."
+          },
+          "plugin": {
+            "kind": "signoz/ListPanel",
+            "spec": {
+              "selectFields": [
+                {
+                  "name": "timestamp",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "number"
+                },
+                {
+                  "name": "severity_text",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "string"
+                },
+                {
+                  "name": "body",
+                  "signal": "",
+                  "fieldContext": "",
+                  "fieldDataType": "string"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "raw",
+              "spec": {
+                "name": "A",
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "stepInterval": 60,
+                    "signal": "logs",
+                    "source": "",
+                    "disabled": false,
+                    "filter": {
+                      "expression": "service.name = 'ingest-service' AND (severity_text IN ('ERROR', 'WARN', 'WARNING') OR body CONTAINS 'index finished' OR body CONTAINS 'index failed')"
+                    },
+                    "groupBy": [],
+                    "order": [
+                      {
+                        "key": {
+                          "name": "timestamp",
+                          "signal": "",
+                          "fieldContext": "",
+                          "fieldDataType": ""
+                        },
+                        "direction": "desc"
+                      }
+                    ],
+                    "having": {
+                      "expression": ""
+                    },
+                    "functions": [],
+                    "legend": "",
+                    "limit": 50
+                  }
+                }
+              }
+            }
+          ],
+          "links": []
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Index jobs",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/259508ca-7f93-58b8-b9cb-6f4ef2b7927c"
+              }
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/53caa432-27b2-5034-8e16-a7a46ff4455e"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 3,
+              "content": {
+                "$ref": "#/spec/panels/dd43430d-fd57-5112-8f63-5821578cc31a"
+              }
+            },
+            {
+              "x": 0,
+              "y": 3,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/26bd5a11-092b-543e-9892-49d75c71954d"
+              }
+            },
+            {
+              "x": 6,
+              "y": 3,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/ef079ccc-12c7-5bed-b61a-ebe28a512672"
+              }
+            },
+            {
+              "x": 0,
+              "y": 9,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/56df1334-859b-5104-9454-ff22764584a1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 15,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/7265866e-95c2-5703-9830-f533b8f3d3d5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 22,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/f42c1951-f11a-5f01-b060-2895196c2bd9"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Dependencies",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/e93abfd7-e8f8-52dc-a2df-9e4d3a01d307"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/92435e22-df86-5082-a170-77dbb73ee048"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/37e4a3e5-d670-58e0-a859-cdad0de35715"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Logs",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/0304bb58-e3e3-579d-804d-9b26a5ca7f21"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/d1d98032-bec0-54b9-9e88-e1ded899d4f6"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "",
+    "refreshInterval": "",
+    "links": []
+  }
+}

@@ -1,0 +1,1619 @@
+{
+  "schemaVersion": "v6",
+  "generateName": true,
+  "tags": [
+    {
+      "key": "component",
+      "value": "opensearch"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "OpenSearch",
+      "description": "Cluster, shards, thread pools, host, indexing, caches, and JVM charts for the OpenSearch Prometheus exporter (opensearch_*). Adapted from the OpenSearch mixin (Grafana dashboard 23029)."
+    },
+    "duration": "3h",
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "cluster",
+          "display": {
+            "name": "Cluster"
+          },
+          "allowMultiple": false,
+          "sort": "alphabetical-asc",
+          "plugin": {
+            "kind": "signoz/DynamicVariable",
+            "spec": {
+              "name": "cluster",
+              "signal": "metrics"
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "node",
+          "display": {
+            "name": "Node"
+          },
+          "allowMultiple": true,
+          "allowAllValue": true,
+          "sort": "alphabetical-asc",
+          "plugin": {
+            "kind": "signoz/DynamicVariable",
+            "spec": {
+              "name": "node",
+              "signal": "metrics"
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "cluster-status": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Cluster status",
+            "description": "0 = green, 1 = yellow, 2 = red."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "decimalPrecision": "0"
+              },
+              "thresholds": [
+                {
+                  "value": 0,
+                  "color": "#22c55e",
+                  "operator": "equal",
+                  "format": "background"
+                },
+                {
+                  "value": 1,
+                  "color": "#eab308",
+                  "operator": "equal",
+                  "format": "background"
+                },
+                {
+                  "value": 2,
+                  "color": "#ef4444",
+                  "operator": "equal",
+                  "format": "background"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max(opensearch_cluster_status{cluster=\"$cluster\"})"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cluster-health": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Cluster Health History",
+            "description": "Green, yellow, and red cluster status over time."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list",
+                "customColors": {
+                  "GREEN": "#22c55e",
+                  "YELLOW": "#eab308",
+                  "RED": "#ef4444"
+                }
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "solid",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "A",
+                          "query": "(opensearch_cluster_status{cluster=\"$cluster\"} == 0) + 1",
+                          "legend": "GREEN"
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "B",
+                          "query": "(opensearch_cluster_status{cluster=\"$cluster\"} == 1)",
+                          "legend": "YELLOW"
+                        }
+                      },
+                      {
+                        "type": "promql",
+                        "spec": {
+                          "name": "C",
+                          "query": "(opensearch_cluster_status{cluster=\"$cluster\"} == 2) - 1",
+                          "legend": "RED"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cluster-nodes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Nodes"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "decimalPrecision": "0"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max(opensearch_cluster_nodes_number{cluster=\"$cluster\"})"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cluster-data-nodes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Data nodes"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "decimalPrecision": "0"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max(opensearch_cluster_datanodes_number{cluster=\"$cluster\"})"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cluster-pending-tasks": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Pending tasks"
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "formatting": {
+                "decimalPrecision": "0"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max(opensearch_cluster_pending_tasks_number{cluster=\"$cluster\"})"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "shards": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Shards",
+            "description": "Shard counts by state."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max by (type) (opensearch_cluster_shards_number{cluster=\"$cluster\"})",
+                    "legend": "{{type}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "threadpools": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Thread pool tasks",
+            "description": "Tasks by thread pool."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "max by (name) (opensearch_threadpool_tasks_number{cluster=\"$cluster\"})",
+                    "legend": "{{name}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cpu": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "CPU usage"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              },
+              "formatting": {
+                "unit": "percent"
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 100
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_os_cpu_percent{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "memory": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Memory usage"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              },
+              "formatting": {
+                "unit": "bytes"
+              },
+              "axes": {
+                "softMin": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_os_mem_used_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "disk": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Disk usage"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              },
+              "formatting": {
+                "unit": "percentunit"
+              },
+              "axes": {
+                "softMin": 0,
+                "softMax": 1
+              },
+              "thresholds": [
+                {
+                  "value": 0.8,
+                  "color": "#eab308",
+                  "label": "80%"
+                },
+                {
+                  "value": 0.9,
+                  "color": "#ef4444",
+                  "label": "90%"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "1 - opensearch_fs_path_available_bytes{cluster=\"$cluster\",node=~\"$node\"} / opensearch_fs_path_total_bytes{cluster=\"$cluster\",node=~\"$node\"}",
+                    "legend": "{{node}} - {{path}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "index-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Documents indexing rate"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "index-latency": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Indexing latency"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_indexing_index_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[5m]) / rate(opensearch_indices_indexing_index_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "search-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Search rate"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "search-latency": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Search latency"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_search_query_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[5m]) / rate(opensearch_indices_search_query_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "doc-count": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Documents count (with replicas)"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "solid",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_indices_doc_number{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "delete-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Documents deleting rate"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_doc_deleted_number{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "merge-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Documents merging rate"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_merges_total_docs_count{cluster=\"$cluster\",node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "fielddata-size": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Field data memory size"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_indices_fielddata_memory_size_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "fielddata-evictions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Field data evictions"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_fielddata_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "query-cache-size": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Query cache size"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_indices_querycache_cache_size_number{cluster=\"$cluster\", node=~\"$node\"} or opensearch_indices_querycache_cache_size_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "query-cache-evictions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Query cache evictions"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_querycache_evictions_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "query-cache-hits": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Query cache hits"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_querycache_hit_count{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "query-cache-misses": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Query cache misses"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_querycache_miss_number{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "index-throttle": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Indexing throttling"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_indexing_throttle_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "merge-throttle": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Merging throttling"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_indices_merges_total_throttled_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "heap": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Heap used"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              },
+              "formatting": {
+                "unit": "bytes"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "opensearch_jvm_mem_heap_used_bytes{cluster=\"$cluster\", node=~\"$node\"}",
+                    "legend": "{{node}} - heap used"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "gc-count": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GC count"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_jvm_gc_collection_count{cluster=\"$cluster\",node=~\"$node\"}[5m])",
+                    "legend": "{{node}} - {{gc}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "gc-time": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GC time"
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "visualization": {
+                "timePreference": "global_time"
+              },
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "chartAppearance": {
+                "lineStyle": "solid",
+                "lineInterpolation": "linear",
+                "fillMode": "none",
+                "showPoints": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/PromQLQuery",
+                  "spec": {
+                    "name": "A",
+                    "query": "rate(opensearch_jvm_gc_collection_time_seconds{cluster=\"$cluster\", node=~\"$node\"}[5m])",
+                    "legend": "{{node}} - {{gc}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Cluster",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 2,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/cluster-status"
+              }
+            },
+            {
+              "x": 2,
+              "y": 0,
+              "width": 4,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/cluster-health"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 2,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/cluster-nodes"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 2,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/cluster-data-nodes"
+              }
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "width": 2,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/cluster-pending-tasks"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Shards",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/shards"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Threadpools",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/threadpools"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "System",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/cpu"
+              }
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/memory"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/disk"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Documents and Latencies",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/index-rate"
+              }
+            },
+            {
+              "x": 3,
+              "y": 0,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/index-latency"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/search-rate"
+              }
+            },
+            {
+              "x": 9,
+              "y": 0,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/search-latency"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/doc-count"
+              }
+            },
+            {
+              "x": 4,
+              "y": 8,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/delete-rate"
+              }
+            },
+            {
+              "x": 8,
+              "y": 8,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/merge-rate"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Caches",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/fielddata-size"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/fielddata-evictions"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/query-cache-size"
+              }
+            },
+            {
+              "x": 3,
+              "y": 8,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/query-cache-evictions"
+              }
+            },
+            {
+              "x": 6,
+              "y": 8,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/query-cache-hits"
+              }
+            },
+            {
+              "x": 9,
+              "y": 8,
+              "width": 3,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/query-cache-misses"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Throttling",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/index-throttle"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/merge-throttle"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "JVM",
+            "collapse": {
+              "open": true
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/heap"
+              }
+            },
+            {
+              "x": 4,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gc-count"
+              }
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 4,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gc-time"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

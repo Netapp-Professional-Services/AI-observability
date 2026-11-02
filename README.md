@@ -90,10 +90,36 @@ backend that requires authentication.
 
 Stops the gateway and every backend profile. Named volumes are kept.
 
-An OpenObserve **AI Metrics** dashboard (tokens, latency, LLM spans) is at
-[`dashboards/ai-metrics.dashboard.json`](dashboards/ai-metrics.dashboard.json).
-See [docs/ai-metrics-dashboard.md](docs/ai-metrics-dashboard.md) to import it.
+## Dashboards
+
+Sample dashboards live under [`dashboards/`](dashboards/). Import the JSON in
+the folder for each backend you start. OpenObserve files are in
+[`dashboards/openobserve/`](dashboards/openobserve/); SigNoz files are in
+[`dashboards/signoz/`](dashboards/signoz/). A new sample is another JSON file
+in the matching folder. Import it the same way.
+
+OpenObserve: **Dashboards → Import**, then upload the file. Or:
+
+```bash
+source .env
+curl -s -u "${ZO_ROOT_USER_EMAIL}:${ZO_ROOT_USER_PASSWORD}" \
+  -H 'Content-Type: application/json' \
+  -X POST 'http://127.0.0.1:5080/api/default/dashboards' \
+  --data-binary @dashboards/openobserve/<file>.json
+```
+
+SigNoz: **Dashboards → New dashboard → Import JSON**. Or:
+
+```bash
+source .env
+curl -s -H "SIGNOZ-API-KEY: ${SIGNOZ_API_KEY}" \
+  -H 'Content-Type: application/json' \
+  -X POST "${SIGNOZ_URL:-http://localhost:8080}/api/v2/dashboards" \
+  --data-binary @dashboards/signoz/<file>.json
+```
+
 For Langflow token capture, use the **OpenAI** endpoint — not OpenAI Compatible.
+See [docs/ai-metrics-dashboard.md](docs/ai-metrics-dashboard.md).
 
 VictoriaMetrics setup notes: [docs/victoriametrics.md](docs/victoriametrics.md).
 SigNoz setup notes: [docs/signoz.md](docs/signoz.md).
@@ -106,7 +132,9 @@ AI-observability/
 ├── compose.fanout.yaml
 ├── collector/
 ├── signoz/
-├── dashboards/ai-metrics.dashboard.json
+├── dashboards/
+│   ├── openobserve/
+│   └── signoz/
 ├── scripts/start.sh
 ├── scripts/stop.sh
 ├── scripts/signoz-sync-llm-prices.py
