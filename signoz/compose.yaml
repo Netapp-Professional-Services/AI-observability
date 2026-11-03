@@ -29,6 +29,9 @@ services:
       timeout: 10s
     volumes:
       - ${SIGNOZ_KEEPER_DATA_DIR:-signoz-keeper-data}:/var/lib/clickhouse-keeper
+      # Image also declares VOLUME /var/lib/clickhouse. An explicit mount
+      # replaces the anonymous volume Docker would create. Keeper does not write here.
+      - ${SIGNOZ_KEEPER_CLICKHOUSE_DIR:-signoz-keeper-clickhouse}:/var/lib/clickhouse
       - ./telemetrykeeper/clickhousekeeper/keeper-0.yaml:/etc/clickhouse-keeper/keeper.yaml:ro
 
   signoz-telemetrystore-clickhouse-user-scripts:
@@ -48,9 +51,12 @@ services:
         cd /tmp
         wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
         tar -xvzf histogram-quantile.tar.gz
+        mkdir -p /var/lib/clickhouse/user_scripts
         mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
     volumes:
-      - ${SIGNOZ_CLICKHOUSE_USER_SCRIPTS_DIR:-signoz-clickhouse-user-scripts}:/var/lib/clickhouse/user_scripts:z
+      # Same directory as the ClickHouse server. One mount covers the image
+      # VOLUME, and histogramQuantile lands in user_scripts/ inside it.
+      - ${SIGNOZ_CLICKHOUSE_DATA_DIR:-signoz-clickhouse-data}:/var/lib/clickhouse
 
   signoz-telemetrystore-clickhouse-0-0:
     profiles:
@@ -79,9 +85,6 @@ services:
       timeout: 10s
     volumes:
       - ${SIGNOZ_CLICKHOUSE_DATA_DIR:-signoz-clickhouse-data}:/var/lib/clickhouse
-      # Writable, and :z so this container can chown the helper. The entrypoint
-      # runs `chown -R` on the data dir; :z shares the SELinux label with the init container
-      - ${SIGNOZ_CLICKHOUSE_USER_SCRIPTS_DIR:-signoz-clickhouse-user-scripts}:/var/lib/clickhouse/user_scripts:z
       - ./telemetrystore/clickhouse/config-0-0.yaml:/etc/clickhouse-server/config-0-0.yaml:ro
       - ./telemetrystore/clickhouse/functions.yaml:/etc/clickhouse-server/functions.yaml:ro
 
@@ -187,6 +190,6 @@ services:
 
 volumes:
   signoz-keeper-data:
+  signoz-keeper-clickhouse:
   signoz-clickhouse-data:
-  signoz-clickhouse-user-scripts:
   signoz-postgres-data:

@@ -12,14 +12,9 @@ UI (vmui): http://localhost:8428/vmui/
 ./scripts/start.sh victoriametrics
 ```
 
-Fan out metrics (and other signals to the other backends):
-
-```bash
-./scripts/start.sh openobserve victoriametrics
-./scripts/start.sh openlit victoriametrics
-./scripts/start.sh openobserve openlit victoriametrics
-./scripts/start.sh signoz victoriametrics
-```
+Pass it with any other local mode to fan out. `custom` stays alone.
+Grafana charts these metrics; see [grafana.md](grafana.md). The provisioned
+VictoriaMetrics datasource uses the Prometheus API at `http://victoriametrics:8428`.
 
 Send client telemetry to the gateway at `localhost:4317` (gRPC) or
 `localhost:4318` (HTTP). The collector exports metrics to

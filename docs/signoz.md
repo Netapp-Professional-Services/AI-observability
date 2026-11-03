@@ -19,14 +19,7 @@ ClickHouse is running as well.
 ./scripts/start.sh signoz
 ```
 
-Fan out with the other local backends (any mix; `custom` stays alone):
-
-```bash
-./scripts/start.sh openobserve signoz
-./scripts/start.sh openlit signoz
-./scripts/start.sh openobserve openlit signoz
-./scripts/start.sh signoz victoriametrics
-```
+Pass it with any other local mode to fan out. `custom` stays alone.
 
 Send client telemetry to the gateway at `localhost:4317` (gRPC) or
 `localhost:4318` (HTTP). The gateway forwards a copy to `signoz-ingester:4317`.
@@ -72,8 +65,8 @@ Foundry wrote into the lock file.
 | `SIGNOZ_POSTGRES_DB` | `signoz` | Postgres database |
 | `SIGNOZ_CLICKHOUSE_DATA_DIR` | named volume | ClickHouse data directory |
 | `SIGNOZ_KEEPER_DATA_DIR` | named volume | ClickHouse Keeper data directory |
+| `SIGNOZ_KEEPER_CLICKHOUSE_DIR` | named volume | Unused `/var/lib/clickhouse` path on the keeper image; set so Docker does not create an anonymous volume |
 | `SIGNOZ_POSTGRES_DATA_DIR` | named volume | Postgres data directory |
-| `SIGNOZ_CLICKHOUSE_USER_SCRIPTS_DIR` | named volume | ClickHouse `histogram-quantile` helper |
 | `SIGNOZ_API_KEY` | unset | Admin service-account key for `scripts/signoz-sync-llm-prices.py` |
 | `SIGNOZ_URL` | `http://localhost:$SIGNOZ_UI_PORT` | SigNoz base URL for the price sync |
 | `SIGNOZ_LLM_PROVIDERS` | OpenRouter default set | Comma-separated provider prefixes to price |
@@ -142,8 +135,9 @@ and `signoz/telemetrystore/`. Then re-apply these edits to the generated
 - Keep Foundry's service names for ClickHouse, Keeper, and Postgres so the
   generated DSNs still resolve.
 - Substitute `SIGNOZ_POSTGRES_*` into Postgres and the SigNoz SQL DSN, and
-  `SIGNOZ_*_DATA_DIR` plus `SIGNOZ_CLICKHOUSE_USER_SCRIPTS_DIR` for the data
-  volumes. Leave volume names unpinned so they take this Compose project's prefix.
+  `SIGNOZ_*_DATA_DIR` for the data volumes. The user-scripts init container
+  mounts `SIGNOZ_CLICKHOUSE_DATA_DIR` and writes `histogramQuantile` under
+  `user_scripts/` there. Leave volume names unpinned so they take this Compose project's prefix.
 - Pin `signoz/signoz` and `signoz/signoz-otel-collector` if Foundry still emits
   `:latest`. Record the tags in `signoz/casting.yaml` and re-forge so
   `signoz/casting.yaml.lock` matches.

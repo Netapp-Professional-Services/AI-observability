@@ -10,15 +10,11 @@ collector stays on the compose network and writes ClickHouse itself.
 ./scripts/start.sh openlit
 ```
 
-To send the same gateway stream to OpenObserve as well:
+Pass it with any other local mode to fan out the same gateway stream. `custom` stays alone.
 
-```bash
-./scripts/start.sh openobserve openlit
-```
-
-Open http://localhost:3000 (override with `OPENLIT_UI_PORT`). Send client telemetry to the
+Open http://localhost:3001 (override with `OPENLIT_UI_PORT`). Send client telemetry to the
 gateway at `localhost:4317` (gRPC) or `localhost:4318` (HTTP). The gateway forwards a
-copy to OpenLIT at `openlit:4317`. With both modes, it also forwards to OpenObserve.
+copy to OpenLIT at `openlit:4317`.
 
 ## Database config (seeded automatically)
 
