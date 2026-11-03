@@ -75,81 +75,97 @@ curl -sf -X POST "http://127.0.0.1:4318/v1/traces" \
   }" >/dev/null
 echo "  gen_ai span sent"
 
-echo "Sending GenAI token + duration metrics..."
-curl -sf -X POST "http://127.0.0.1:4318/v1/metrics" \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"resourceMetrics\": [{
-      \"resource\": {\"attributes\": [
-        {\"key\": \"service.name\", \"value\": {\"stringValue\": \"langflow\"}}
-      ]},
-      \"scopeMetrics\": [{
-        \"scope\": {\"name\": \"demo.gen_ai\"},
-        \"metrics\": [
-          {
-            \"name\": \"gen_ai.client.token.usage\",
-            \"description\": \"Number of tokens used\",
-            \"unit\": \"{token}\",
-            \"histogram\": {
-              \"dataPoints\": [
-                {
-                  \"attributes\": [
-                    {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
-                    {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
-                    {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}},
-                    {\"key\": \"gen_ai.token.type\", \"value\": {\"stringValue\": \"input\"}}
-                  ],
-                  \"startTimeUnixNano\": \"${START_NS}\",
-                  \"timeUnixNano\": \"${AI_END_NS}\",
-                  \"count\": \"1\",
-                  \"sum\": 128,
-                  \"bucketCounts\": [\"0\", \"1\", \"0\"],
-                  \"explicitBounds\": [100.0, 1000.0]
-                },
-                {
-                  \"attributes\": [
-                    {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
-                    {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
-                    {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}},
-                    {\"key\": \"gen_ai.token.type\", \"value\": {\"stringValue\": \"output\"}}
-                  ],
-                  \"startTimeUnixNano\": \"${START_NS}\",
-                  \"timeUnixNano\": \"${AI_END_NS}\",
-                  \"count\": \"1\",
-                  \"sum\": 64,
-                  \"bucketCounts\": [\"1\", \"0\", \"0\"],
-                  \"explicitBounds\": [100.0, 1000.0]
-                }
-              ],
-              \"aggregationTemporality\": 2
-            }
-          },
-          {
-            \"name\": \"gen_ai.client.operation.duration\",
-            \"description\": \"GenAI operation duration\",
-            \"unit\": \"s\",
-            \"histogram\": {
-              \"dataPoints\": [{
-                \"attributes\": [
-                  {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
-                  {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
-                  {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}}
+# Cumulative histograms need two samples in-range for PromQL increase()/rate()
+# (Grafana GenAI panels). Push once, wait, then push higher cumulatives.
+send_genai_metrics() {
+  local time_ns="$1"
+  local token_count="$2"
+  local input_sum="$3"
+  local output_sum="$4"
+  local duration_count="$5"
+  local duration_sum="$6"
+  curl -sf -X POST "http://127.0.0.1:4318/v1/metrics" \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"resourceMetrics\": [{
+        \"resource\": {\"attributes\": [
+          {\"key\": \"service.name\", \"value\": {\"stringValue\": \"langflow\"}}
+        ]},
+        \"scopeMetrics\": [{
+          \"scope\": {\"name\": \"demo.gen_ai\"},
+          \"metrics\": [
+            {
+              \"name\": \"gen_ai.client.token.usage\",
+              \"description\": \"Number of tokens used\",
+              \"unit\": \"{token}\",
+              \"histogram\": {
+                \"dataPoints\": [
+                  {
+                    \"attributes\": [
+                      {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
+                      {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
+                      {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}},
+                      {\"key\": \"gen_ai.token.type\", \"value\": {\"stringValue\": \"input\"}}
+                    ],
+                    \"startTimeUnixNano\": \"${START_NS}\",
+                    \"timeUnixNano\": \"${time_ns}\",
+                    \"count\": \"${token_count}\",
+                    \"sum\": ${input_sum},
+                    \"bucketCounts\": [\"0\", \"${token_count}\", \"0\"],
+                    \"explicitBounds\": [100.0, 1000.0]
+                  },
+                  {
+                    \"attributes\": [
+                      {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
+                      {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
+                      {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}},
+                      {\"key\": \"gen_ai.token.type\", \"value\": {\"stringValue\": \"output\"}}
+                    ],
+                    \"startTimeUnixNano\": \"${START_NS}\",
+                    \"timeUnixNano\": \"${time_ns}\",
+                    \"count\": \"${token_count}\",
+                    \"sum\": ${output_sum},
+                    \"bucketCounts\": [\"${token_count}\", \"0\", \"0\"],
+                    \"explicitBounds\": [100.0, 1000.0]
+                  }
                 ],
-                \"startTimeUnixNano\": \"${START_NS}\",
-                \"timeUnixNano\": \"${AI_END_NS}\",
-                \"count\": \"1\",
-                \"sum\": 0.25,
-                \"bucketCounts\": [\"0\", \"1\", \"0\"],
-                \"explicitBounds\": [0.1, 1.0]
-              }],
-              \"aggregationTemporality\": 2
+                \"aggregationTemporality\": 2
+              }
+            },
+            {
+              \"name\": \"gen_ai.client.operation.duration\",
+              \"description\": \"GenAI operation duration\",
+              \"unit\": \"s\",
+              \"histogram\": {
+                \"dataPoints\": [{
+                  \"attributes\": [
+                    {\"key\": \"gen_ai.operation.name\", \"value\": {\"stringValue\": \"chat\"}},
+                    {\"key\": \"gen_ai.provider.name\", \"value\": {\"stringValue\": \"openai\"}},
+                    {\"key\": \"gen_ai.request.model\", \"value\": {\"stringValue\": \"gpt-4o-mini\"}}
+                  ],
+                  \"startTimeUnixNano\": \"${START_NS}\",
+                  \"timeUnixNano\": \"${time_ns}\",
+                  \"count\": \"${duration_count}\",
+                  \"sum\": ${duration_sum},
+                  \"bucketCounts\": [\"0\", \"${duration_count}\", \"0\"],
+                  \"explicitBounds\": [0.1, 1.0]
+                }],
+                \"aggregationTemporality\": 2
+              }
             }
-          }
-        ]
+          ]
+        }]
       }]
-    }]
-  }" >/dev/null
-echo "  gen_ai metrics sent"
+    }" >/dev/null
+}
+
+echo "Sending GenAI token + duration metrics (two samples for increase())..."
+send_genai_metrics "${AI_END_NS}" 1 128 64 1 0.25
+echo "  first sample sent"
+sleep 3
+AI_END_NS2="$(python3 -c 'import time; print(int(time.time()*1e9)+250_000_000)')"
+send_genai_metrics "${AI_END_NS2}" 2 256 128 2 0.50
+echo "  second sample sent"
 
 echo "Sending OTLP log through collector..."
 curl -sf -X POST "http://127.0.0.1:4318/v1/logs" \
