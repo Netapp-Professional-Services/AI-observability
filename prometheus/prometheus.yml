@@ -1,0 +1,10 @@
+# Push-only. The gateway writes OTLP metrics; nothing is scraped.
+# UnderscoreEscapingWithSuffixes matches VictoriaMetrics
+# (-opentelemetry.usePrometheusNaming), so the same PromQL works in Grafana.
+global:
+  scrape_interval: 15s
+
+otlp:
+  translation_strategy: UnderscoreEscapingWithSuffixes
+
+scrape_configs: []

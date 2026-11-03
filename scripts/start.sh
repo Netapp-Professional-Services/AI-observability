@@ -10,16 +10,15 @@ Modes:
   openobserve                         Self-hosted OpenObserve
   openlit                             Self-hosted OpenLIT
   victoriametrics                     Self-hosted VictoriaMetrics (metrics)
+  prometheus                          Self-hosted Prometheus (metrics)
+  grafana                             Grafana UI (no gateway)
   signoz                              Self-hosted SigNoz
-  openobserve openlit                 Fan out to both backends
-  openobserve signoz                  Fan out to OpenObserve and SigNoz
-  openobserve openlit signoz          Fan out to all three trace backends
-  openobserve victoriametrics         Fan out (metrics also to VM)
   custom                              Any OTLP-compatible backend
 
-custom cannot be combined with another mode.
-Any mix of the local backends is valid.
-VictoriaMetrics stores metrics only; combine it with OpenObserve, OpenLIT, or SigNoz for traces and logs.
+Any mix of the local backends is valid. Grafana can be added to any mix.
+custom cannot be combined with another backend. Grafana may be added alongside custom.
+VictoriaMetrics and Prometheus store metrics only; combine either with OpenObserve, OpenLIT, or SigNoz for traces and logs.
+Grafana queries Prometheus and VictoriaMetrics when those containers are on the Compose network.
 SigNoz needs about 4 GB of Docker memory.
 EOF
 }
@@ -32,7 +31,7 @@ fi
 MODES=()
 for arg in "$@"; do
   case "${arg}" in
-    openobserve|openlit|victoriametrics|signoz|custom) MODES+=("${arg}") ;;
+    openobserve|openlit|victoriametrics|prometheus|grafana|signoz|custom) MODES+=("${arg}") ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 1 ;;
   esac
@@ -56,9 +55,13 @@ for mode in "${MODES[@]}"; do
   seen="${seen} ${mode}"
 done
 
-if has_mode custom && [[ ${#MODES[@]} -ne 1 ]]; then
-  echo "custom cannot be combined with another mode" >&2
-  exit 1
+if has_mode custom; then
+  for mode in "${MODES[@]}"; do
+    if [[ "${mode}" != "custom" && "${mode}" != "grafana" ]]; then
+      echo "custom cannot be combined with another mode" >&2
+      exit 1
+    fi
+  done
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -128,6 +131,24 @@ setup_victoriametrics() {
   CONFIGS+=(config.victoriametrics.yaml)
 }
 
+setup_prometheus() {
+  export PROMETHEUS_OTLP_METRICS_ENDPOINT="${PROMETHEUS_OTLP_METRICS_ENDPOINT:-http://prometheus:9090/api/v1/otlp/v1/metrics}"
+  export PROMETHEUS_TLS_INSECURE="${PROMETHEUS_TLS_INSECURE:-true}"
+  export PROMETHEUS_RETENTION="${PROMETHEUS_RETENTION:-30d}"
+  export PROMETHEUS_UI_PORT="${PROMETHEUS_UI_PORT:-9090}"
+  PROFILES+=(prometheus)
+  BACKENDS+=("Prometheus (${PROMETHEUS_OTLP_METRICS_ENDPOINT})")
+  CONFIGS+=(config.prometheus.yaml)
+}
+
+setup_grafana() {
+  export GRAFANA_PORT="${GRAFANA_PORT:-3000}"
+  export GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
+  export GRAFANA_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin}"
+  PROFILES+=(grafana)
+  BACKENDS+=("Grafana (http://localhost:${GRAFANA_PORT})")
+}
+
 setup_signoz() {
   export SIGNOZ_OTLP_ENDPOINT="$(normalize_grpc_endpoint "${SIGNOZ_OTLP_ENDPOINT:-signoz-ingester:4317}")"
   require_grpc_hostport SIGNOZ_OTLP_ENDPOINT "${SIGNOZ_OTLP_ENDPOINT}"
@@ -172,6 +193,12 @@ fi
 if has_mode victoriametrics; then
   setup_victoriametrics
 fi
+if has_mode prometheus; then
+  setup_prometheus
+fi
+if has_mode grafana; then
+  setup_grafana
+fi
 if has_mode signoz; then
   setup_signoz
 fi
@@ -184,8 +211,11 @@ if [[ ${#CONFIGS[@]} -gt 1 ]]; then
   FANOUT=1
 fi
 
-# Base compose still needs COLLECTOR_CONFIG; fan-out overrides the command.
-export COLLECTOR_CONFIG="${CONFIGS[0]}"
+# Base compose still needs COLLECTOR_CONFIG when a gateway starts.
+# Grafana alone has no collector config.
+if [[ ${#CONFIGS[@]} -gt 0 ]]; then
+  export COLLECTOR_CONFIG="${CONFIGS[0]}"
+fi
 
 if command -v docker >/dev/null 2>&1 \
    && docker info >/dev/null 2>&1 \
@@ -207,7 +237,9 @@ fi
 echo "Project:   ${COMPOSE_PROJECT_NAME}"
 echo "Mode:      ${MODES[*]}"
 echo "Backend:   ${BACKENDS[*]}"
-if [[ "${FANOUT}" -eq 1 ]]; then
+if [[ ${#CONFIGS[@]} -eq 0 ]]; then
+  echo "Collector: (none)"
+elif [[ "${FANOUT}" -eq 1 ]]; then
   echo "Collector: ${CONFIGS[*]} (append pipelines)"
 else
   echo "Collector: ${COLLECTOR_CONFIG}"
@@ -238,17 +270,25 @@ done
 "${COMPOSE[@]}" "${compose_args[@]}" up -d --build
 
 echo
-echo "Host OTLP gRPC:                  http://localhost:4317"
-echo "Host OTLP HTTP:                  http://localhost:4318"
-echo "Collector health:                http://localhost:13133"
+if [[ ${#CONFIGS[@]} -gt 0 ]]; then
+  echo "Host OTLP gRPC:                  http://localhost:4317"
+  echo "Host OTLP HTTP:                  http://localhost:4318"
+  echo "Collector health:                http://localhost:13133"
+fi
 if has_mode openobserve; then
   echo "OpenObserve UI:                  http://localhost:5080"
 fi
 if has_mode openlit; then
-  echo "OpenLIT UI:                      http://localhost:${OPENLIT_UI_PORT:-3000}"
+  echo "OpenLIT UI:                      http://localhost:${OPENLIT_UI_PORT:-3001}"
 fi
 if has_mode victoriametrics; then
   echo "VictoriaMetrics UI (vmui):       http://localhost:${VICTORIAMETRICS_UI_PORT:-8428}/vmui/"
+fi
+if has_mode prometheus; then
+  echo "Prometheus UI:                   http://localhost:${PROMETHEUS_UI_PORT:-9090}"
+fi
+if has_mode grafana; then
+  echo "Grafana UI:                      http://localhost:${GRAFANA_PORT:-3000}"
 fi
 if has_mode signoz; then
   echo "SigNoz UI:                       http://localhost:${SIGNOZ_UI_PORT:-8080}"

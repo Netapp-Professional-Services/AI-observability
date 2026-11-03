@@ -4,12 +4,12 @@
 #   openobserve       — self-hosted OpenObserve + gateway
 #   openlit           — OpenLIT + ClickHouse + gateway
 #   victoriametrics   — VictoriaMetrics (metrics) + gateway
+#   prometheus        — Prometheus (metrics) + gateway
+#   grafana           — Grafana UI only (no gateway)
 #   signoz            — SigNoz (ClickHouse, Keeper, Postgres) + gateway
 #   custom            — gateway only → CUSTOM_OTLP_* endpoint
 #
-# Start: ./scripts/start.sh openobserve|openlit|victoriametrics|signoz|custom
-#        ./scripts/start.sh openobserve openlit
-#        ./scripts/start.sh openobserve signoz
+# Start: ./scripts/start.sh <mode> [mode ...]   (./scripts/start.sh --help)
 # Stop:  ./scripts/stop.sh
 # Fan-out command: compose.fanout.yaml (appends selected collector configs).
 # SigNoz services: signoz/compose.yaml (included below).
@@ -25,6 +25,7 @@ services:
       - openobserve
       - openlit
       - victoriametrics
+      - prometheus
       - signoz
       - custom
     image: otel/opentelemetry-collector-contrib:0.163.2
@@ -41,6 +42,8 @@ services:
       - OPENLIT_OTLP_ENDPOINT=${OPENLIT_OTLP_ENDPOINT:-openlit:4317}
       - VICTORIAMETRICS_OTLP_METRICS_ENDPOINT=${VICTORIAMETRICS_OTLP_METRICS_ENDPOINT:-}
       - VICTORIAMETRICS_TLS_INSECURE=${VICTORIAMETRICS_TLS_INSECURE:-true}
+      - PROMETHEUS_OTLP_METRICS_ENDPOINT=${PROMETHEUS_OTLP_METRICS_ENDPOINT:-}
+      - PROMETHEUS_TLS_INSECURE=${PROMETHEUS_TLS_INSECURE:-true}
       - SIGNOZ_OTLP_ENDPOINT=${SIGNOZ_OTLP_ENDPOINT:-signoz-ingester:4317}
       - CUSTOM_OTLP_GRPC_ENDPOINT=${CUSTOM_OTLP_GRPC_ENDPOINT:-}
       - CUSTOM_OTLP_HTTP_ENDPOINT=${CUSTOM_OTLP_HTTP_ENDPOINT:-}
@@ -118,11 +121,11 @@ services:
       - INIT_DB_USERNAME=${OPENLIT_DB_USER:-default}
       - INIT_DB_PASSWORD=${OPENLIT_DB_PASSWORD:-OPENLIT}
       - SQLITE_DATABASE_URL=file:/app/client/data/data.db
-      - PORT=${OPENLIT_UI_PORT:-3000}
-      - DOCKER_PORT=${OPENLIT_UI_PORT:-3000}
+      - PORT=${OPENLIT_UI_PORT:-3001}
+      - DOCKER_PORT=${OPENLIT_UI_PORT:-3001}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
     ports:
-      - "${OPENLIT_UI_PORT:-3000}:${OPENLIT_UI_PORT:-3000}"
+      - "${OPENLIT_UI_PORT:-3001}:${OPENLIT_UI_PORT:-3001}"
       # OTLP stays internal — clients send to otel-collector, which fans in here.
     depends_on:
       openlit-clickhouse:
@@ -139,7 +142,7 @@ services:
       - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/attribute-keys/route.js:/app/client/.next/server/app/api/telemetry/logs/attribute-keys/route.js:ro
       - ./openlit/assets/openlit-patches/server/app/api/telemetry/logs/config/route.js:/app/client/.next/server/app/api/telemetry/logs/config/route.js:ro
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)).then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3001)).then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -161,8 +164,57 @@ services:
     volumes:
       - ${VICTORIAMETRICS_DATA_DIR:-victoriametrics-data}:/storage
 
+  prometheus:
+    profiles:
+      - prometheus
+    image: prom/prometheus:v3.11.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-otlp-receiver
+      - --web.listen-address=:9090
+    ports:
+      - "${PROMETHEUS_UI_PORT:-9090}:9090"
+    volumes:
+      - ${PROMETHEUS_DATA_DIR:-prometheus-data}:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  grafana:
+    profiles:
+      - grafana
+    image: grafana/grafana:13.3.0
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ${GRAFANA_DATA_DIR:-grafana-data}:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards/grafana:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   openobserve-data:
   openlit-clickhouse-data:
   openlit-data:
   victoriametrics-data:
+  prometheus-data:
+  grafana-data:

@@ -32,9 +32,5 @@ last 15 minutes.
 The gateway does not scrape Docker container metrics or container log files.
 Metrics and logs appear when a client sends them over OTLP.
 
-To run OpenLIT at the same time, start both modes. The gateway appends both
-collector configs and delivers one stream to each store:
-
-```bash
-./scripts/start.sh openobserve openlit
-```
+Pass `openobserve` with any other local mode to deliver the same stream to each
+store. `custom` stays alone.
